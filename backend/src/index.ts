@@ -5,6 +5,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pino from "pino";
 import { errorHandler } from "@/middleware/errorHandler";
+import routes from "@/routes";
 
 const logger = pino({ level: env.NODE_ENV === "production" ? "info" : "debug" });
 const app = express();
@@ -19,6 +20,8 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }));
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", env: env.NODE_ENV });
 });
+
+app.use("/api", routes);
 
 // Error handler (must be last)
 app.use(errorHandler);
