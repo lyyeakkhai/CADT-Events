@@ -126,23 +126,23 @@ Fullstack event management platform for CADT (school events/seminars). Students 
 
 ## Database Schema
 
-See: [./database-schema.md](./database-schema.md)
+See: [../architecture/database.md](../architecture/database.md)
 
 ## API Specification
 
-See: [./api-spec.md](./api-spec.md)
+See: [../api/api-spec.md](../api/api-spec.md)
 
 ## Frontend Architecture
 
-See: [./frontend-architecture.md](./frontend-architecture.md)
+See: [../architecture/frontend.md](../architecture/frontend.md)
 
 ## Telegram Bot Plan
 
-See: [./telegram-bot.md](./telegram-bot.md)
+See: [../features/telegram-bot.md](../features/telegram-bot.md)
 
 ## Project Structure
 
-See: [./project-structure.md](./project-structure.md)
+See: [../architecture/project-structure.md](../architecture/project-structure.md)
 
 ---
 
