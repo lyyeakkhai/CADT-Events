@@ -1,28 +1,24 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { env } from "@/config/env";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/common/prisma/client";
+import {
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from "@/common/errors/app-error";
+import type { LoginInput, RegisterInput } from "@/modules/auth/auth.schema";
 
 const SALT_ROUNDS = 12;
-
-export interface RegisterInput {
-  name: string;
-  email: string;
-  password: string;
-  studentId?: string;
-}
-
-export interface LoginInput {
-  email: string;
-  password: string;
-}
+const ACCESS_TOKEN_TTL = "15m";
+const REFRESH_TOKEN_TTL = "7d";
 
 function generateTokens(userId: string, email: string, role: string) {
   const accessToken = jwt.sign({ id: userId, email, role }, env.JWT_SECRET, {
-    expiresIn: "15m",
+    expiresIn: ACCESS_TOKEN_TTL,
   });
   const refreshToken = jwt.sign({ id: userId }, env.JWT_REFRESH_SECRET, {
-    expiresIn: "7d",
+    expiresIn: REFRESH_TOKEN_TTL,
   });
   return { accessToken, refreshToken };
 }
@@ -30,11 +26,13 @@ function generateTokens(userId: string, email: string, role: string) {
 export const authService = {
   async register(data: RegisterInput) {
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
-    if (existing) throw Object.assign(new Error("Email already registered"), { status: 409 });
+    if (existing) throw new ConflictError("Email already registered");
 
     if (data.studentId) {
-      const existingId = await prisma.user.findUnique({ where: { studentId: data.studentId } });
-      if (existingId) throw Object.assign(new Error("Student ID already registered"), { status: 409 });
+      const existingId = await prisma.user.findUnique({
+        where: { studentId: data.studentId },
+      });
+      if (existingId) throw new ConflictError("Student ID already registered");
     }
 
     const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
@@ -46,7 +44,14 @@ export const authService = {
         password: hashedPassword,
         studentId: data.studentId || null,
       },
-      select: { id: true, name: true, email: true, role: true, studentId: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        studentId: true,
+        createdAt: true,
+      },
     });
 
     await prisma.notificationPreference.create({
@@ -59,10 +64,10 @@ export const authService = {
 
   async login(data: LoginInput) {
     const user = await prisma.user.findUnique({ where: { email: data.email } });
-    if (!user) throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+    if (!user) throw new UnauthorizedError("Invalid email or password");
 
     const valid = await bcrypt.compare(data.password, user.password);
-    if (!valid) throw Object.assign(new Error("Invalid email or password"), { status: 401 });
+    if (!valid) throw new UnauthorizedError("Invalid email or password");
 
     const tokens = generateTokens(user.id, user.email, user.role);
     return {
@@ -78,31 +83,40 @@ export const authService = {
   },
 
   async refresh(refreshToken: string) {
+    let decoded: { id: string };
     try {
-      const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { id: string };
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: { id: true, email: true, role: true },
-      });
-      if (!user) throw Object.assign(new Error("User not found"), { status: 401 });
-
-      const accessToken = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },
-        env.JWT_SECRET,
-        { expiresIn: "15m" }
-      );
-      return { accessToken };
+      decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { id: string };
     } catch {
-      throw Object.assign(new Error("Invalid refresh token"), { status: 401 });
+      throw new UnauthorizedError("Invalid refresh token");
     }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, role: true },
+    });
+    if (!user) throw new UnauthorizedError("User not found");
+
+    const accessToken = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      env.JWT_SECRET,
+      { expiresIn: ACCESS_TOKEN_TTL },
+    );
+    return { accessToken };
   },
 
   async me(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, role: true, studentId: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        studentId: true,
+        createdAt: true,
+      },
     });
-    if (!user) throw Object.assign(new Error("User not found"), { status: 404 });
+    if (!user) throw new NotFoundError("User not found");
     return user;
   },
 };
