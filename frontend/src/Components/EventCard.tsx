@@ -54,7 +54,7 @@ export default function EventCard({ event, onSelect }: EventCardProps) {
           onClick={() => onSelect(event)}
           className="px-4 py-2 bg-slate-950 hover:bg-blue-900 text-white text-xs font-extrabold rounded-lg shadow-sm transition-all active:scale-[0.97]"
         >
-          Register Now
+          View Detail
         </button>
       </div>
     </div>
