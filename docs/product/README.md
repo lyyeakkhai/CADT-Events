@@ -8,6 +8,7 @@ What we're building and why. Lives upstream of architecture — answers "what pr
 |---|---|
 | [prd.md](./prd.md) | Product Requirements Document — vision, personas, scope, success criteria |
 | [implementation-plan.md](./implementation-plan.md) | Phased delivery plan with milestones and links to architecture docs |
+| [use-cases.md](./use-cases.md) | Use-Case Specifications & Diagram — user interactions, actor roles, flows, and system boundaries |
 
 ## What goes here
 
