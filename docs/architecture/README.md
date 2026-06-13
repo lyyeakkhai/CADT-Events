@@ -9,7 +9,9 @@ How the system is structured. The single source of truth for system-wide design.
 | [backend.md](./backend.md) | Express.js + TypeScript backend conventions and module structure |
 | [frontend.md](./frontend.md) | Next.js + Tailwind frontend architecture |
 | [database.md](./database.md) | PostgreSQL schema, relationships, indexes |
+| [erd-schema.md](./erd-schema.md) | ERD & Relational Schema — Minimal entity relationships, tables, normal forms, and index configs |
 | [project-structure.md](./project-structure.md) | Monorepo layout and naming conventions |
+| [uml.md](./uml.md) | UML Diagrams — Class diagrams, sequence flows, state machines, and system boundary configurations |
 | [decisions/](./decisions/) | Architecture Decision Records (ADRs) |
 
 ## What goes here
