@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-// Fixed casing mismatch path to point to your lowercase components folder
+// Import professional vectors from the package
+import { Search, Calendar, RotateCcw, X, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import EventCard from '../../../Components/EventCard.tsx';
 import { FIGMA_EVENTS_DATA } from '../data/eventData.tsx';
 import type { AcademicEvent } from '../data/eventData.tsx';
@@ -10,18 +11,18 @@ interface DiscoveryFeedProps {
 }
 
 export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: DiscoveryFeedProps) {
-  // Operational state fields
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedDept, setSelectedDept] = useState<string>('All');
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>('This Month');
+  const [currentSlide, setCurrentSlide] = useState<number>(0);
 
-  // Dynamic pipeline matching search query and structural dropdown filters
+  const featuredEvents = useMemo(() => {
+  return FIGMA_EVENTS_DATA.filter(event => event.isFeatured === true); // ✅ Match lowercase 'isFeatured'
+}, []);
+
   const filteredEvents = useMemo(() => {
     return FIGMA_EVENTS_DATA.filter(event => {
-      // 1. Department Track Filtering Condition
       const matchesDept = selectedDept === 'All' || event.dept === selectedDept || event.dept === 'All';
-      
-      // 2. Real-Time Search Query Matching Condition (Checks Title, Speaker, and Description)
       const cleanQuery = searchQuery.toLowerCase().trim();
       const matchesSearch = 
         event.title.toLowerCase().includes(cleanQuery) ||
@@ -32,7 +33,16 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
     });
   }, [selectedDept, searchQuery]);
 
-  // Unified reset logic to clear all user search inputs
+  const nextSlide = () => {
+    if (featuredEvents.length === 0) return;
+    setCurrentSlide((prev) => (prev + 1) % featuredEvents.length);
+  };
+
+  const prevSlide = () => {
+    if (featuredEvents.length === 0) return;
+    setCurrentSlide((prev) => (prev - 1 + featuredEvents.length) % featuredEvents.length);
+  };
+
   const handleClearAll = () => {
     setSearchQuery('');
     setSelectedDept('All');
@@ -42,57 +52,95 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
   return (
     <div className="w-full flex flex-col bg-slate-50">
       
-      {/* Visual Hero Grid Component */}
-      <section className="relative w-full h-[360px] md:h-[420px] overflow-hidden bg-slate-900 group">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80" 
-            alt="CADT Innovation Center Building" 
-            className="w-full h-full object-cover opacity-35 transition-transform duration-700 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent" />
-        </div>
+      {/* =======================================================================
+          HERO CAROUSEL SLIDER BLOCK (Vector Layout Update)
+         ======================================================================= */}
+      {featuredEvents.length > 0 && (
+        <section className="relative w-full h-[340px] md:h-[400px] overflow-hidden bg-slate-950 flex items-center group border-b border-slate-800">
+          <div className="absolute inset-0 z-0 transition-all duration-500">
+            <img 
+              src={featuredEvents[currentSlide].image} 
+              alt={featuredEvents[currentSlide].title} 
+              className="w-full h-full object-cover opacity-25 mix-blend-luminosity"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
+          </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-center items-start">
-          <span className="bg-amber-400 text-slate-900 text-[10px] tracking-widest uppercase font-black px-2.5 py-1 rounded-md mb-4 shadow-sm">
-            Academic Excellence
-          </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-none mb-3 max-w-2xl">
-            Discover Tech Excellence
-          </h1>
-          <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-xl leading-relaxed mb-6">
-            Join the forefront of innovation at CADT. From international tech symposiums to hands-on workshops, explore the events shaping the future of digital technology.
-          </p>
-          
-          <div className="flex flex-wrap gap-3">
-            <button 
-              onClick={() => setSelectedDept('All')}
-              className="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-900 text-xs font-bold rounded-lg shadow-md transition-all active:scale-[0.98]"
+          <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 text-left space-y-3.5">
+            <div className="flex items-center gap-2 select-none">
+              <span className="bg-amber-400 text-slate-900 text-[10px] tracking-widest font-black uppercase px-2.5 py-0.5 rounded-md shadow-sm flex items-center gap-1">
+                <span className="w-3 h-3 text-slate-800 " /> SPECIAL EVENT
+              </span>
+              <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] tracking-wider font-extrabold uppercase px-2.5 py-0.5 rounded-md">
+                {featuredEvents[currentSlide].badge}
+              </span>
+            </div>
+
+            <h1 
+              onClick={() => onSelectEvent && onSelectEvent(featuredEvents[currentSlide])}
+              className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight mb-3 max-w-3xl cursor-pointer hover:text-amber-400 transition-colors duration-150"
             >
-              Browse All Events
-            </button>
+              {featuredEvents[currentSlide].title}
+            </h1>
+            
+            <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-xl leading-relaxed mb-5 line-clamp-2">
+              {featuredEvents[currentSlide].description}
+            </p>
+            
+            <div className="flex flex-wrap items-center text-slate-400 text-[11px] font-bold gap-x-4 gap-y-1 mb-6 select-none">
+              <span>👤 Host: <span className="text-slate-200">{featuredEvents[currentSlide].speaker}</span></span>
+              <span>🏢 Venue: <span className="text-slate-200">{featuredEvents[currentSlide].venue}</span></span>
+              <span>📅 Date: <span className="text-slate-200">{featuredEvents[currentSlide].date}</span></span>
+            </div>
+            
             <button 
-              onClick={onViewCalendarClick}
-              className="px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-lg border border-white/20 shadow-md transition-all active:scale-[0.98]"
+              onClick={() => onSelectEvent && onSelectEvent(featuredEvents[currentSlide])}
+              className="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-900 text-xs font-black rounded-lg shadow-md transition-all cursor-pointer"
             >
-              View Calendar
+              Register Now →
             </button>
           </div>
-        </div>
-      </section>
 
-      {/* Upgraded Sorting Control Deck Component with Interactive Search Field */}
-      <section className="w-full border-b border-slate-200/80 bg-white py-4 shadow-xs sticky top-16 z-30">
+          {/* Symmetrical Vector Left/Right Arrows */}
+          <button 
+            onClick={prevSlide}
+            className="absolute left-4 z-20 bg-slate-900/60 hover:bg-white hover:text-slate-950 text-white w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-sm transition-all opacity-0 group-hover:opacity-100 cursor-pointer select-none shadow-md"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={nextSlide}
+            className="absolute right-4 z-20 bg-slate-900/60 hover:bg-white hover:text-slate-950 text-white w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-sm transition-all opacity-0 group-hover:opacity-100 cursor-pointer select-none shadow-md"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
+          {/* Pagination Indicators */}
+          <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center gap-2 select-none">
+            {featuredEvents.map((_, index) => (
+              <span 
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                  currentSlide === index ? 'w-5 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'
+                }`}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* =======================================================================
+          SORTING CONTROL DECK SECTION (Vector Inputs Update)
+         ======================================================================= */}
+      <section className="w-full border-b border-slate-200/80 bg-white py-3.5 shadow-xs sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           
-          {/* Inner Controls Form Container */}
           <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-3 max-w-3xl">
             
-            {/* Contextual Input Field Wrapper */}
+            {/* Contextual Input Field Wrapper with Vector Search Lens */}
             <div className="relative flex-1">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none text-xs">
-                🔍
-              </span>
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
@@ -103,14 +151,14 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 text-xs font-bold transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
-                  ✕
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Department Dropdown Filter */}
+            {/* Department Filter */}
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
@@ -118,11 +166,12 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
             >
               <option value="All">Department: All</option>
               <option value="Computer Science">Computer Science</option>
+              <option value="Software Engineering">Software Engineering</option>
               <option value="Telecommunication & Networking">Telecommunication & Networking</option>
               <option value="Digital Business">Digital Business</option>
             </select>
 
-            {/* Timeframe Dropdown Filter */}
+            {/* Timeframe Filter */}
             <select
               value={selectedTimeframe}
               onChange={(e) => setSelectedTimeframe(e.target.value)}
@@ -133,34 +182,46 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
             </select>
           </div>
 
-          {/* Results Metadata Section */}
-          <div className="flex items-center justify-between lg:justify-end gap-4 text-xs font-bold text-slate-400 select-none border-t sm:border-t-0 pt-2 sm:pt-0 shrink-0">
-            <span>{filteredEvents.length} Events Found</span>
+          {/* Results Analytics Metadata */}
+          <div className="flex items-center justify-between lg:justify-end gap-4 text-xs font-bold text-slate-400 select-none border-t lg:border-t-0 pt-2 lg:pt-0 shrink-0">
+            <span className="flex items-center gap-1 text-slate-500">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" /> {filteredEvents.length} Events Found
+            </span>
             <button 
               onClick={handleClearAll}
-              className="text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+              className="text-blue-600 hover:text-blue-800 transition-colors cursor-pointer font-extrabold flex items-center gap-0.5"
             >
-              Clear All
+              <RotateCcw className="w-3 h-3" /> Clear All
+            </button>
+            <button
+              onClick={onViewCalendarClick}
+              className="ml-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <Calendar className="w-3.5 h-3.5 text-slate-500" /> Calendar View
             </button>
           </div>
         </div>
       </section>
 
-      {/* Grid Layout context utilizing isolated EventCard items */}
+      {/* =======================================================================
+          MAIN RENDER GRID LAYER
+         ======================================================================= */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
         {filteredEvents.length === 0 ? (
-          /* Human-Computer Interaction User Feedback State */
-          <div className="w-full text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300 px-4 flex flex-col items-center justify-center animate-fade-in">
-            <span className="text-3xl block mb-2">🔎</span>
-            <p className="text-sm font-extrabold text-slate-800 mb-1">No upcoming match criteria found</p>
+          /* High-Fidelity UX Error Empty State View (Vector Update) */
+          <div className="w-full text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300 px-4 flex flex-col items-center justify-center animate-fade-in max-w-md mx-auto shadow-sm">
+            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center mb-3">
+              <Search className="w-6 h-6 text-slate-400" />
+            </div>
+            <p className="text-sm font-extrabold text-slate-800 mb-1">No match criteria found</p>
             <p className="text-xs font-medium text-slate-400 max-w-xs leading-relaxed">
               We couldn't find anything matching your exact query string. Check your parameters or clear the query to start fresh!
             </p>
             <button
               onClick={handleClearAll}
-              className="mt-4 px-4 py-2 bg-slate-950 hover:bg-blue-900 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-sm"
+              className="mt-4 px-4 py-2 bg-slate-950 hover:bg-blue-900 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-sm flex items-center gap-1"
             >
-              Reset All Filters
+              <RotateCcw className="w-3 h-3" /> Reset All Filters
             </button>
           </div>
         ) : (
@@ -177,7 +238,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
 
         {filteredEvents.length > 0 && (
           <div className="w-full flex justify-center items-center mt-12">
-            <button className="px-6 py-2.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 text-xs font-bold rounded-xl shadow-xs transition-all active:scale-[0.98]">
+            <button className="px-6 py-2.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 text-xs font-bold rounded-xl shadow-xs transition-all active:scale-[0.98] cursor-pointer">
               Load More Events
             </button>
           </div>

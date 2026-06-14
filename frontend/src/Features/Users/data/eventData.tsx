@@ -16,6 +16,7 @@ export interface AcademicEvent {
   badge: string;
   image: string;
   description: string;
+  isFeatured?: boolean;
 }
 
 export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
@@ -30,6 +31,7 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     type: "Seminar",
     badge: "Seminar",
     image: hidetoheal,
+    isFeatured: true,
     description: "A deep dive into zero-trust architectures and next-generation threat mitigation strategies."
   },
   {
@@ -42,6 +44,7 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     dept: "Computer Science",
     type: "Conference",
     badge: "Conference",
+    isFeatured: false,
     image: ict,
     description: "Exploring the ethics and implementation of Large Language Models in institutional workflows."
   },
@@ -56,6 +59,7 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     type: "Exhibition",
     badge: "Exhibition",
     image: drone,
+     isFeatured: false,
     description: "An interactive exhibition featuring the capstone projects of our Digital Media and UX Design students."
   },
   {
@@ -69,6 +73,7 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     type: "Networking",
     badge: "Networking",
     image: plugandplay,
+    isFeatured: true,
     description: "Connect with over 50 leading technology firms and startups for internship and career opportunities."
   },
   {
@@ -82,6 +87,7 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     type: "Hands-on",
     badge: "Hands-on",
     image: digitaltransform,
+    isFeatured: true,
     description: "Practical workshop on processing large-scale datasets using AWS and Google Cloud systems."
   },
   {
@@ -95,6 +101,7 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     type: "Seminar",
     badge: "Seminar",
     image:scholarship,
+     isFeatured: false,
     description: "A seminar for aspiring team leads and project managers on navigating shifting digital trends."
   }
 ];

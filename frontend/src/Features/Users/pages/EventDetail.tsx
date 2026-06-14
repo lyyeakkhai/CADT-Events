@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AcademicEvent } from '../data/eventData.tsx';
-
+import IDRI from '../../../asset/innovationcenter.png';
 interface EventDetailsProps {
   event: AcademicEvent;
   onBackClick: () => void;
@@ -183,7 +183,7 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
             </h2>
             <div className="relative h-48 rounded-xl overflow-hidden bg-slate-100 border border-slate-200/60">
               <img 
-                src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1000&q=80" 
+                src={IDRI}
                 alt="CADT Innovation Center Building Architecture" 
                 className="w-full h-full object-cover brightness-95"
               />

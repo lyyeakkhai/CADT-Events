@@ -1,14 +1,34 @@
 import React, { useState } from 'react';
+import About from '../src/Features/Users/pages/About.tsx';
 import AdminLogin from './Features/auth/pages/AdminLogin.tsx';
 import ExternalLogin from './Features/auth/pages/ExternalLogin.tsx';
 import Login from '../src/Features/auth/pages/Login.tsx'
 import Register from '../src/Features/auth/pages/Register.tsx';
 import RoleSelection from '../src/Features/auth/pages/RoleSelection.tsx';
-import Navbar from './Components/Navbar.tsx'; 
+import Navbar from './Components/Navbar.tsx';
 import Footer from './Components/Footer.tsx';
 import DiscoveryFeed from '../src/Features/Users/pages/DiscoveryFeed.tsx';
 import EventDetails from './Features/Users/pages/EventDetail.tsx';
+import SeatSelection from './Features/Users/pages/SeatSelection.tsx';
+import BookingConfirmed from './Features/Users/pages/BookingConfirmed.tsx';
 import type { AcademicEvent } from './Features/Users/data/eventData';
+<<<<<<< HEAD
+import './index.css';
+import MyBooking from './Features/Users/pages/MyBooking.tsx';
+
+interface BookingInfo {
+  event: AcademicEvent;
+  seat: string;
+  bookingId: string;
+}
+
+function App() {
+  const [currentRole, setCurrentRole] = useState<'guest' | 'participant_form' | 'student' | 'admin'>('guest');
+  const [activeTab, setActiveTab] = useState<'Discover' | 'My Booking' | 'Calendar' | 'About'>('Discover');
+  const [selectedEvent, setSelectedEvent] = useState<AcademicEvent | null>(null);
+  const [seatSelectionEvent, setSeatSelectionEvent] = useState<AcademicEvent | null>(null);
+  const [bookingInfo, setBookingInfo] = useState<BookingInfo | null>(null);
+=======
 import './index.css';    
  
 function App() {
@@ -20,18 +40,31 @@ function App() {
   const handleCheckoutTransition = (event: AcademicEvent) => {
     alert(`Transitioning to auditorium seat configuration matrices for: "${event.title}"`);
   };
+>>>>>>> 43a61a1039172d9e5adda850ac9e71efa38dc928
 
   const handleLogout = () => {
     setCurrentRole('guest');
     setActiveTab('Discover');
     setSelectedEvent(null);
+    setSeatSelectionEvent(null);
+    setBookingInfo(null);
   };
 
+  const handleNavTabChange = (tab: 'Discover' | 'My Booking' | 'Calendar' | 'About') => {
+    setActiveTab(tab);
+    setSelectedEvent(null);
+    setSeatSelectionEvent(null);
+    setBookingInfo(null);
+  };
+
+<<<<<<< HEAD
+=======
   // =======================================================================
   // MULTI-ROLE CONTEXT AUTHENTICATION INTERCEPTOR ROUTER
   // =======================================================================
   
   // View 1: Main Gateway Option Card Selector (Participant vs Administrator)
+>>>>>>> 43a61a1039172d9e5adda850ac9e71efa38dc928
   if (currentRole === 'guest') {
     return (
       <RoleSelection 
@@ -46,13 +79,20 @@ function App() {
     );
   }
 
+<<<<<<< HEAD
+=======
   // View 2: Split-panel Master Onboarding Form Hub (Handles External Register + Student Perks Sidebar)
+>>>>>>> 43a61a1039172d9e5adda850ac9e71efa38dc928
   if (currentRole === 'participant_form') {
     return (
       <Register
         onBackClick={() => setCurrentRole('guest')}
+<<<<<<< HEAD
+        onInstituteLoginClick={() => setCurrentRole('participant_form')}
+=======
         onInstituteLoginClick={() => setCurrentRole('institute_login')}
         onLoginClick={() => setCurrentRole('participant_login')}
+>>>>>>> 43a61a1039172d9e5adda850ac9e71efa38dc928
         onExternalSubmitComplete={() => {
           alert("Attendee account verified successfully! Proceeding onto the student discovery feed layout.");
           setCurrentRole('student');
@@ -62,6 +102,21 @@ function App() {
     );
   }
 
+<<<<<<< HEAD
+  // ── Booking Confirmed: full standalone page (no navbar/footer overlay) ──
+  if (bookingInfo) {
+    return (
+      <BookingConfirmed
+        event={bookingInfo.event}
+        seat={bookingInfo.seat}
+        bookingId={bookingInfo.bookingId}
+        onBackClick={() => setBookingInfo(null)}
+        onGoToMyBooking={() => {
+          setBookingInfo(null);
+          setActiveTab('My Booking');
+          setSeatSelectionEvent(null);
+          setSelectedEvent(null);
+=======
   // View 3: External Visitor/Attendee Profile Login Gate
   if (currentRole === 'participant_login') {
     return (
@@ -71,11 +126,14 @@ function App() {
         onLoginSuccess={() => {
           setCurrentRole('student');
           setActiveTab('Discover');
+>>>>>>> 43a61a1039172d9e5adda850ac9e71efa38dc928
         }}
       />
     );
   }
 
+<<<<<<< HEAD
+=======
   // View 4: Institutional Access Portal Login (For Internal Students & Staff)
   if (currentRole === 'institute_login') {
     return (
@@ -110,16 +168,21 @@ function App() {
   // =======================================================================
   // MAIN CORE APPLICATION RUNTIME SHELL (Renders once Authenticated)
   // =======================================================================
+>>>>>>> 43a61a1039172d9e5adda850ac9e71efa38dc928
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-900 animate-fade-in">
-      
-      <Navbar 
-        activeTab={activeTab} 
-        setActiveTab={(tab) => { setActiveTab(tab); setSelectedEvent(null); }}
+
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={handleNavTabChange}
         onProfileClick={handleLogout}
       />
+<<<<<<< HEAD
+
+=======
       
       {/* Dynamic Security Environment Indicator Ribbon Stripe */}
+>>>>>>> 43a61a1039172d9e5adda850ac9e71efa38dc928
       <div className="w-full bg-[#0f172a] text-white px-4 sm:px-8 py-1.5 text-[11px] font-bold flex justify-between items-center border-b border-slate-800 shadow-inner select-none">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -129,6 +192,36 @@ function App() {
           Exit Console ↩
         </button>
       </div>
+<<<<<<< HEAD
+
+      <div className="flex-grow w-full flex flex-col">
+        {activeTab === 'Discover' ? (
+          seatSelectionEvent ? (
+            <SeatSelection
+              event={seatSelectionEvent}
+              onBackClick={() => setSeatSelectionEvent(null)}
+              onRegisterClick={(event, seat, bookingId) => {
+                // Navigate to standalone BookingConfirmed page
+                setBookingInfo({ event, seat, bookingId });
+                setSeatSelectionEvent(null);
+                setSelectedEvent(null);
+              }}
+            />
+          ) : selectedEvent ? (
+            <EventDetails
+              event={selectedEvent}
+              onBackClick={() => setSelectedEvent(null)}
+              onRegisterClick={(event) => setSeatSelectionEvent(event)}
+            />
+          ) : (
+            <DiscoveryFeed
+              onSelectEvent={(event) => setSelectedEvent(event)}
+              onViewCalendarClick={() => setActiveTab('Calendar')}
+            />
+          )
+        ) : activeTab === 'My Booking' ? (
+          <MyBooking />
+=======
       
       {/* Central Layout Panel Page Content Viewport */}
       <div className="flex-grow w-full flex flex-col">
@@ -138,6 +231,7 @@ function App() {
             onLogoutClick={handleLogout}
             onCreateEventClick={() => alert("Launching Multi-Section Creation Modal Panel Wizard...")}
           />
+>>>>>>> 43a61a1039172d9e5adda850ac9e71efa38dc928
         ) : (
           /* CONSUMERS PLATFORM: central interactive discovery tracks */
           activeTab === 'Discover' ? (
@@ -148,21 +242,27 @@ function App() {
                 onRegisterClick={handleCheckoutTransition}
               />
             ) : (
-              <DiscoveryFeed 
+            <DiscoveryFeed 
                 onSelectEvent={(event) => setSelectedEvent(event)}
                 onViewCalendarClick={() => setActiveTab('Calendar')}
               />
             )
+          ) : activeTab === 'About' ? (
+            <About onExploreEventsClick={() => setActiveTab('Discover')} />
           ) : (
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center flex-grow">
-              <h2 className="text-2xl font-black text-slate-900 mb-2">{activeTab} Section</h2>
-              <p className="text-sm font-medium text-slate-500">Prototype usability evaluation container sandbox.</p>
+            /* Mock placeholder section tracks sandbox views */
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center flex-grow flex flex-col items-center justify-center">
+              <span className="text-3xl block mb-2">🛠️</span>
+              <h2 className="text-xl font-black text-slate-900 mb-1">{activeTab} View Sandbox</h2>
+              <p className="text-xs font-semibold text-slate-400 max-w-xs mx-auto leading-relaxed">
+                The mock configuration panel track grid for this sub-route is currently executing correctly.
+              </p>
             </main>
           )
         )}
       </div>
 
-      <Footer onLinkClick={() => setSelectedEvent(null)} />
+      <Footer onLinkClick={() => { setSelectedEvent(null); setSeatSelectionEvent(null); }} />
 
     </div>
   );
