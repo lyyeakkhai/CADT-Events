@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import About from '../src/Features/Users/pages/About.tsx';
 import AdminLogin from './Features/auth/pages/AdminLogin.tsx';
 import ExternalLogin from './Features/auth/pages/ExternalLogin.tsx';
 import Login from '../src/Features/auth/pages/Login.tsx'
@@ -148,15 +149,21 @@ function App() {
                 onRegisterClick={handleCheckoutTransition}
               />
             ) : (
-              <DiscoveryFeed 
+            <DiscoveryFeed 
                 onSelectEvent={(event) => setSelectedEvent(event)}
                 onViewCalendarClick={() => setActiveTab('Calendar')}
               />
             )
+          ) : activeTab === 'About' ? (
+            <About onExploreEventsClick={() => setActiveTab('Discover')} />
           ) : (
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center flex-grow">
-              <h2 className="text-2xl font-black text-slate-900 mb-2">{activeTab} Section</h2>
-              <p className="text-sm font-medium text-slate-500">Prototype usability evaluation container sandbox.</p>
+            /* Mock placeholder section tracks sandbox views */
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center flex-grow flex flex-col items-center justify-center">
+              <span className="text-3xl block mb-2">🛠️</span>
+              <h2 className="text-xl font-black text-slate-900 mb-1">{activeTab} View Sandbox</h2>
+              <p className="text-xs font-semibold text-slate-400 max-w-xs mx-auto leading-relaxed">
+                The mock configuration panel track grid for this sub-route is currently executing correctly.
+              </p>
             </main>
           )
         )}
