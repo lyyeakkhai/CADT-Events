@@ -3,8 +3,8 @@ import User_Profile from '../asset/Profile free icons designed by Freepik.jpg';
 import Logo from '../asset/CADT Event Logo (1).png';
 
 interface NavbarProps {
-  activeTab: 'Discover' | 'My Booking' | 'Calendar' | 'About';
-  setActiveTab: (tab: 'Discover' | 'My Booking' | 'Calendar' | 'About') => void;
+  activeTab: 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Favorites' | 'Profile';
+  setActiveTab: (tab: 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Favorites' | 'Profile') => void;
   onNotificationClick?: () => void;
   onFavoritesClick?: () => void;
   onProfileClick?: () => void;
