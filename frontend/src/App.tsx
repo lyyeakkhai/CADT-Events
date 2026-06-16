@@ -10,6 +10,7 @@ import Footer from './Components/Footer.tsx';
 import DiscoveryFeed from './Features/Users/pages/DiscoveryFeed.tsx';
 import EventDetails from './Features/Users/pages/EventDetail.tsx';
 import SeatSelection from './Features/Users/pages/SeatSelection.tsx';
+import Registration from './Features/Users/pages/Registration.tsx'; // ← ADD THIS
 import BookingConfirmed from './Features/Users/pages/BookingConfirmed.tsx';
 import MyBooking from './Features/Users/pages/MyBooking.tsx';
 import MyFavorites from './Features/Users/pages/MyFavorites.tsx';
@@ -24,6 +25,12 @@ interface BookingInfo {
   bookingId: string;
 }
 
+// ← ADD RegistrationInfo interface
+interface RegistrationInfo {
+  event: AcademicEvent;
+  seat: string;
+}
+
 type ActiveTab = 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Favorites' | 'Profile';
 type Role = 'guest' | 'participant_form' | 'participant_login' | 'institute_login' | 'admin_login' | 'student' | 'admin';
 
@@ -32,6 +39,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('Discover');
   const [selectedEvent, setSelectedEvent] = useState<AcademicEvent | null>(null);
   const [seatSelectionEvent, setSeatSelectionEvent] = useState<AcademicEvent | null>(null);
+  const [registrationInfo, setRegistrationInfo] = useState<RegistrationInfo | null>(null); // ← ADD
   const [bookingInfo, setBookingInfo] = useState<BookingInfo | null>(null);
 
   const handleLogout = () => {
@@ -39,6 +47,7 @@ function App() {
     setActiveTab('Discover');
     setSelectedEvent(null);
     setSeatSelectionEvent(null);
+    setRegistrationInfo(null); // ← ADD
     setBookingInfo(null);
   };
 
@@ -46,6 +55,7 @@ function App() {
     setActiveTab(tab);
     setSelectedEvent(null);
     setSeatSelectionEvent(null);
+    setRegistrationInfo(null); // ← ADD
     setBookingInfo(null);
   };
 
@@ -137,6 +147,7 @@ function App() {
           setBookingInfo(null);
           setActiveTab('My Booking');
           setSeatSelectionEvent(null);
+          setRegistrationInfo(null); // ← ADD
           setSelectedEvent(null);
         }}
       />
@@ -176,14 +187,24 @@ function App() {
       {/* Page Content */}
       <div className="flex-grow w-full flex flex-col">
         {activeTab === 'Discover' ? (
-          seatSelectionEvent ? (
+          // ── UPDATED: insert Registration step between SeatSelection and BookingConfirmed ──
+          registrationInfo ? (
+            <Registration
+              event={registrationInfo.event}
+              seat={registrationInfo.seat}
+              onBackClick={() => setRegistrationInfo(null)}
+              onConfirm={(event, seat, bookingId) => {
+                setRegistrationInfo(null);
+                setBookingInfo({ event, seat, bookingId });
+              }}
+            />
+          ) : seatSelectionEvent ? (
             <SeatSelection
               event={seatSelectionEvent}
               onBackClick={() => setSeatSelectionEvent(null)}
-              onRegisterClick={(event, seat, bookingId) => {
-                setBookingInfo({ event, seat, bookingId });
+              onRegisterClick={(event, seat) => {          // ← now goes to Registration, not BookingConfirmed
+                setRegistrationInfo({ event, seat });
                 setSeatSelectionEvent(null);
-                setSelectedEvent(null);
               }}
             />
           ) : selectedEvent ? (
@@ -231,6 +252,7 @@ function App() {
         onLinkClick={() => {
           setSelectedEvent(null);
           setSeatSelectionEvent(null);
+          setRegistrationInfo(null); // ← ADD
         }}
       />
     </div>
