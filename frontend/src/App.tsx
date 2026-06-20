@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
-import About from '../src/Features/Users/pages/About.tsx';
+import About from './Features/Users/pages/About.tsx';
 import AdminLogin from './Features/auth/pages/AdminLogin.tsx';
 import ExternalLogin from './Features/auth/pages/ExternalLogin.tsx';
-import Login from '../src/Features/auth/pages/Login.tsx'
-import Register from '../src/Features/auth/pages/Register.tsx';
-import RoleSelection from '../src/Features/auth/pages/RoleSelection.tsx';
+import Login from './Features/auth/pages/Login.tsx';
+import Register from './Features/auth/pages/Register.tsx';
+import RoleSelection from './Features/auth/pages/RoleSelection.tsx';
 import Navbar from './Components/Navbar.tsx';
 import Footer from './Components/Footer.tsx';
-import DiscoveryFeed from '../src/Features/Users/pages/DiscoveryFeed.tsx';
+import DiscoveryFeed from './Features/Users/pages/DiscoveryFeed.tsx';
 import EventDetails from './Features/Users/pages/EventDetail.tsx';
 import SeatSelection from './Features/Users/pages/SeatSelection.tsx';
+import Registration from './Features/Users/pages/Registration.tsx'; // ← ADD THIS
 import BookingConfirmed from './Features/Users/pages/BookingConfirmed.tsx';
+import MyBooking from './Features/Users/pages/MyBooking.tsx';
+import MyFavorites from './Features/Users/pages/MyFavorites.tsx';
+import ProfileSettings from './Features/Users/pages/ProfileSettings.tsx';
+import EventCalendar from './Features/Users/pages/EventCalendar.tsx';
 import type { AcademicEvent } from './Features/Users/data/eventData';
 import './index.css';
-import MyBooking from './Features/Users/pages/MyBooking.tsx';
 
 interface BookingInfo {
   event: AcademicEvent;
@@ -21,12 +25,21 @@ interface BookingInfo {
   bookingId: string;
 }
 
+// ← ADD RegistrationInfo interface
+interface RegistrationInfo {
+  event: AcademicEvent;
+  seat: string;
+}
+
+type ActiveTab = 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Favorites' | 'Profile';
+type Role = 'guest' | 'participant_form' | 'participant_login' | 'institute_login' | 'admin_login' | 'student' | 'admin';
+
 function App() {
-  // Balanced single-page multi-tier state machine router paths
-  const [currentRole, setCurrentRole] = useState<'guest' | 'participant_form' | 'participant_login' | 'institute_login' | 'admin_login' | 'student' | 'admin'>('guest');
-  const [activeTab, setActiveTab] = useState<'Discover' | 'My Booking' | 'Calendar' | 'About'>('Discover');
+  const [currentRole, setCurrentRole] = useState<Role>('guest');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('Discover');
   const [selectedEvent, setSelectedEvent] = useState<AcademicEvent | null>(null);
   const [seatSelectionEvent, setSeatSelectionEvent] = useState<AcademicEvent | null>(null);
+  const [registrationInfo, setRegistrationInfo] = useState<RegistrationInfo | null>(null); // ← ADD
   const [bookingInfo, setBookingInfo] = useState<BookingInfo | null>(null);
 
   const handleLogout = () => {
@@ -34,40 +47,34 @@ function App() {
     setActiveTab('Discover');
     setSelectedEvent(null);
     setSeatSelectionEvent(null);
-    bookingStatusReset();
-  };
-
-  const bookingStatusReset = () => {
+    setRegistrationInfo(null); // ← ADD
     setBookingInfo(null);
   };
 
-  const handleNavTabChange = (tab: 'Discover' | 'My Booking' | 'Calendar' | 'About') => {
+  const handleNavTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);
     setSelectedEvent(null);
     setSeatSelectionEvent(null);
+    setRegistrationInfo(null); // ← ADD
     setBookingInfo(null);
   };
 
-  // =======================================================================
-  // MULTI-ROLE SECURITY PATHWAY INTERCEPTORS
-  // =======================================================================
-  
-  // State 1: Primary Gateway Selection Menu Card Matrix
+  // ── View 1: Role Selection Gateway ──
   if (currentRole === 'guest') {
     return (
-      <RoleSelection 
+      <RoleSelection
         onSelectRole={(role) => {
           if (role === 'admin') {
-            setCurrentRole('admin_login'); // Routes strictly to Admin credential terminal card
+            setCurrentRole('admin_login');
           } else {
-            setCurrentRole('participant_form'); // Participant selection routes directly onto split registration
+            setCurrentRole('participant_form');
           }
-        }} 
+        }}
       />
     );
   }
 
-  // State 2: Split-panel Master Onboarding Register Card (With Institute login hooks)
+  // ── View 2: Register / Onboarding Form ──
   if (currentRole === 'participant_form') {
     return (
       <Register
@@ -75,7 +82,7 @@ function App() {
         onInstituteLoginClick={() => setCurrentRole('institute_login')}
         onLoginClick={() => setCurrentRole('participant_login')}
         onExternalSubmitComplete={() => {
-          alert("Attendee account verified successfully! Opening workspace discovery feed.");
+          alert('Attendee account verified successfully! Proceeding onto the student discovery feed layout.');
           setCurrentRole('student');
           setActiveTab('Discover');
         }}
@@ -83,10 +90,10 @@ function App() {
     );
   }
 
-  // State 3: External Visitor General Attendee Sign-in Panel Gateway
+  // ── View 3: External Login ──
   if (currentRole === 'participant_login') {
     return (
-      <ExternalLogin 
+      <ExternalLogin
         onBackClick={() => setCurrentRole('participant_form')}
         onSignUpClick={() => setCurrentRole('participant_form')}
         onLoginSuccess={() => {
@@ -97,16 +104,17 @@ function App() {
     );
   }
 
-  // State 4: Institutional Sign-In Access Portal for internal students/staff
+  // ── View 4: Institute Login ──
   if (currentRole === 'institute_login') {
     return (
-      <Login 
+      <Login
         onBackClick={() => setCurrentRole('participant_form')}
         onLoginSuccess={() => {
           setCurrentRole('student');
           setActiveTab('Discover');
         }}
-        onOAuthClick={() => {
+        onOAuthClick={(provider) => {
+          alert(`SSO handshake approved via institutional ${provider.toUpperCase()} portal.`);
           setCurrentRole('student');
           setActiveTab('Discover');
         }}
@@ -114,19 +122,20 @@ function App() {
     );
   }
 
-  // State 5: Secured Organizer Administrative Terminal Entry Gate
+  // ── View 5: Admin Login ──
   if (currentRole === 'admin_login') {
     return (
-      <AdminLogin 
+      <AdminLogin
         onBackClick={() => setCurrentRole('guest')}
         onAdminLoginSuccess={() => {
+          alert('Admin identity token approved. Synchronizing ecosystem metrics inventory logs...');
           setCurrentRole('admin');
         }}
       />
     );
   }
 
-  // State 6: Stanadalone Ticket Generation Output Canvas (Bypasses core layout wrappers)
+  // ── Booking Confirmed: standalone page (no navbar/footer) ──
   if (bookingInfo) {
     return (
       <BookingConfirmed
@@ -138,15 +147,14 @@ function App() {
           setBookingInfo(null);
           setActiveTab('My Booking');
           setSeatSelectionEvent(null);
+          setRegistrationInfo(null); // ← ADD
           setSelectedEvent(null);
         }}
       />
     );
   }
 
-  // =======================================================================
-  // MAIN CORE RUNTIME SHELL APPLICATION (Renders once Authenticated)
-  // =======================================================================
+  // ── Main App Shell ──
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-900 animate-fade-in">
 
@@ -154,31 +162,50 @@ function App() {
       <Navbar
         activeTab={activeTab}
         setActiveTab={handleNavTabChange}
-        onProfileClick={handleLogout}
+        onFavoritesClick={() => handleNavTabChange('Favorites')}
+        onProfileClick={() => handleNavTabChange('Profile')}
       />
-      
-      {/* Dynamic Session Environment Indicator Stripe */}
+
+      {/* Session Ribbon */}
       <div className="w-full bg-[#0f172a] text-white px-4 sm:px-8 py-1.5 text-[11px] font-bold flex justify-between items-center border-b border-slate-800 shadow-inner select-none">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Active Workspace: <span className="text-amber-400 uppercase tracking-wider">{currentRole === 'admin' ? 'Admin Control Node' : 'CADT Student Session'}</span></span>
+          <span>
+            Active Workspace:{' '}
+            <span className="text-amber-400 uppercase tracking-wider">
+              {currentRole === 'admin' ? 'Admin Control Node' : 'CADT Student Session'}
+            </span>
+          </span>
         </div>
-        <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors cursor-pointer text-[10px]">
-          Exit Session ↩
+        <button
+          onClick={handleLogout}
+          className="text-slate-400 hover:text-white transition-colors cursor-pointer text-[10px]"
+        >
+          Exit Console ↩
         </button>
       </div>
 
-      {/* Central View Switcher Content Frame Viewport */}
+      {/* Page Content */}
       <div className="flex-grow w-full flex flex-col">
         {activeTab === 'Discover' ? (
-          seatSelectionEvent ? (
+          // ── UPDATED: insert Registration step between SeatSelection and BookingConfirmed ──
+          registrationInfo ? (
+            <Registration
+              event={registrationInfo.event}
+              seat={registrationInfo.seat}
+              onBackClick={() => setRegistrationInfo(null)}
+              onConfirm={(event, seat, bookingId) => {
+                setRegistrationInfo(null);
+                setBookingInfo({ event, seat, bookingId });
+              }}
+            />
+          ) : seatSelectionEvent ? (
             <SeatSelection
               event={seatSelectionEvent}
               onBackClick={() => setSeatSelectionEvent(null)}
-              onRegisterClick={(event, seat, bookingId) => {
-                setBookingInfo({ event, seat, bookingId });
+              onRegisterClick={(event, seat) => {          // ← now goes to Registration, not BookingConfirmed
+                setRegistrationInfo({ event, seat });
                 setSeatSelectionEvent(null);
-                setSelectedEvent(null);
               }}
             />
           ) : selectedEvent ? (
@@ -190,7 +217,7 @@ function App() {
           ) : (
             <DiscoveryFeed
               onSelectEvent={(event) => setSelectedEvent(event)}
-              onViewCalendarClick={() => setActiveTab('Calendar')}
+              onViewCalendarClick={() => handleNavTabChange('Calendar')}
             />
           )
         ) : activeTab === 'My Booking' ? (
