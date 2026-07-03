@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import { clerkMiddleware } from "@clerk/express";
 import { env } from "@/config/env";
 import { errorHandler } from "@/common/middleware/error-handler.middleware";
+import { clerkWebhookRouter } from "@/modules/webhooks/clerk.routes";
 
 export function createApp() {
   const app = express();
@@ -12,6 +13,10 @@ export function createApp() {
   // Security & parsing
   app.use(helmet());
   app.use(cors());
+  
+  // Webhooks (must be before express.json so body-parser raw works)
+  app.use("/api/webhooks", clerkWebhookRouter);
+
   app.use(express.json());
   app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 100 }));
 

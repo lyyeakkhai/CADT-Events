@@ -51,12 +51,20 @@ function App() {
   const [seatSelectionEvent, setSeatSelectionEvent] = useState<AcademicEvent | null>(null);
   const [bookingInfo, setBookingInfo] = useState<BookingInfo | null>(null);
 
-  // When user signs in, reset to discover
+  // When user signs in, reset to discover or redirect admin
   useEffect(() => {
-    if (isSignedIn) {
+    if (isSignedIn && user) {
+      const email = user.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
+      const hasAdminRole = (user.publicMetadata?.role as string) === 'admin';
+      
+      // If user is identified as admin, redirect to admin subdomain
+      if (hasAdminRole || email.includes('admin')) {
+        window.location.href = 'http://localhost:3000';
+        return;
+      }
       setActiveTab('Discover');
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, user]);
 
   // Derive admin role from Clerk publicMetadata
   // Set `publicMetadata.role = "admin"` in your Clerk dashboard for admin users
