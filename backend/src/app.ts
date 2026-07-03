@@ -29,6 +29,12 @@ export function createApp() {
   // Example of how a protected route would look using our new auth middleware:
   // import { requireAuth } from "@/common/middleware/auth.middleware";
   // app.use("/api/events", requireAuth, eventRoutes);
+  
+  // Upload routes
+  const { uploadRoutes } = require("@/modules/upload/upload.routes");
+  const { requireAuth, requireRole } = require("@/common/middleware/auth.middleware");
+  
+  app.use("/api/upload", requireAuth, requireRole("ADMIN"), uploadRoutes);
 
   // Error handler (must be last)
   app.use(errorHandler);

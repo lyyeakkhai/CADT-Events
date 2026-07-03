@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserButton } from '@clerk/clerk-react';
 import Logo from '../../assets/images/CADT Event Logo (1).png';
+import { useUrlSearch } from '../../../hooks/useUrlSearch';
 
 interface NavbarProps {
   activeTab: 'Discover' | 'My Booking' | 'Calendar' | 'About';
@@ -18,6 +19,8 @@ export default function Navbar({
 }: NavbarProps) {
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useUrlSearch('q');
+  
   const navItems = ['Discover', 'My Booking', 'Calendar', 'About'] as const;
 
   const handleTabSelect = (item: 'Discover' | 'My Booking' | 'Calendar' | 'About') => {
@@ -78,6 +81,25 @@ export default function Navbar({
            ======================================================================= */}
         <div className="flex-1 flex items-center justify-end gap-3 sm:gap-5">
           
+          {/* Search Bar */}
+          <div className="hidden md:flex items-center relative group">
+            <svg className="absolute left-3 w-4 h-4 text-slate-400 group-focus-within:text-amber-400 transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (activeTab !== 'Discover') {
+                  setActiveTab('Discover');
+                }
+              }}
+              placeholder="Search events..." 
+              className="bg-slate-800/60 border border-slate-700/50 text-[13px] rounded-full pl-9 pr-4 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-400/50 focus:border-amber-400/50 focus:bg-slate-800 transition-all w-48 lg:w-64 shadow-inner"
+            />
+          </div>
+
           {/* Notifications Icon Trigger */}
           <button 
             onClick={onNotificationClick}

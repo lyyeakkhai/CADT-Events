@@ -4,6 +4,7 @@ import { Search, Calendar, RotateCcw, X, SlidersHorizontal, ChevronLeft, Chevron
 import EventCard from '../../../components/EventCard';
 import { FIGMA_EVENTS_DATA } from '../data/eventData';
 import type { AcademicEvent } from '../data/eventData';
+import { useUrlSearch } from '../../../hooks/useUrlSearch';
 
 interface DiscoveryFeedProps {
   onSelectEvent?: (event: AcademicEvent) => void;
@@ -11,7 +12,7 @@ interface DiscoveryFeedProps {
 }
 
 export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: DiscoveryFeedProps) {
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useUrlSearch('q');
   const [selectedDept, setSelectedDept] = useState<string>('All');
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>('This Month');
   const [currentSlide, setCurrentSlide] = useState<number>(0);
