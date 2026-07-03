@@ -8,8 +8,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   DIRECT_URL: z.string().min(1, "DIRECT_URL is required"),
-  JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
-  JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),
+  CLERK_PUBLISHABLE_KEY: z.string().min(1, "CLERK_PUBLISHABLE_KEY is required"),
+  CLERK_SECRET_KEY: z.string().min(1, "CLERK_SECRET_KEY is required"),
 });
 
 const result = envSchema.safeParse(process.env);
