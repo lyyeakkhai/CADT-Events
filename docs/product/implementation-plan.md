@@ -1,11 +1,12 @@
 # CADT Events App - Implementation Plan
 
 ## Overview
-Fullstack event management platform for CADT (school events/seminars). Students browse events, book tickets, and receive Telegram alerts. Admins manage events, seats, and send notifications.
+Fullstack event management platform for CADT (school events/seminars). Students browse events, book specific seats, and receive automated Telegram alerts. Admins manage events, layouts, and send notifications.
 
 **Tech Stack:**
-- **Frontend:** Next.js 16 + React 19 + Tailwind CSS 4 + TypeScript
+- **Frontend:** React 19 + Vite + Tailwind CSS 4 + TypeScript
 - **Backend:** Express + TypeScript + Prisma ORM + PostgreSQL
+- **Background Jobs:** Redis + BullMQ (for scheduled notifications and seat hold sweeping)
 - **Notifications:** Telegram Bot API (node-telegram-bot-api)
 - **Validation:** Zod (shared schemas where possible)
 
@@ -16,9 +17,10 @@ Fullstack event management platform for CADT (school events/seminars). Students 
 ### Backend Setup
 | Task | Status | Notes |
 |------|--------|-------|
-| Prisma schema complete | PENDING | All models defined |
+| Prisma schema complete | PENDING | Models including `Seat_Hold` |
 | Database migration | PENDING | `npx prisma migrate dev` |
 | Prisma Client singleton | PENDING | `src/lib/prisma.ts` |
+| Redis & BullMQ Setup | PENDING | Configure connection & worker queues |
 | JWT auth middleware | PENDING | Access + refresh tokens |
 | Password hashing (bcrypt) | PENDING | User registration/login |
 | Role-based access control | PENDING | `student`, `admin` enum |
@@ -53,17 +55,19 @@ Fullstack event management platform for CADT (school events/seminars). Students 
 - Register page (`/register`)
 
 ### 2. Event Management (Admin)
-- **POST** `/api/admin/events` - Create event
+- **POST** `/api/admin/events` - Create event (with venue, seat layouts, speakers)
 - **PUT** `/api/admin/events/:id` - Update event
-- **DELETE** `/api/admin/events/:id` - Delete event
+- **DELETE** `/api/admin/events/:id` - Delete event (Soft delete)
 - **GET** `/api/admin/events` - List all events (admin view)
 - **GET** `/api/admin/events/:id/bookings` - View bookings for event
-- **PUT** `/api/admin/events/:id/seats` - Update available seats
+- **GET** `/api/admin/events/:id/export` - Export attendee list to CSV/Excel
+- **PUT** `/api/admin/users/:id/block` - Block/Manage users
 
 **Frontend:**
 - Admin dashboard (`/admin`)
 - Event create/edit form (`/admin/events/new`, `/admin/events/:id/edit`)
-- Bookings table per event
+- Bookings table per event with Export button
+- User moderation interface
 
 ### 3. Event Discovery (Student)
 - **GET** `/api/events` - List published events (filter: upcoming, category, search)
@@ -71,18 +75,23 @@ Fullstack event management platform for CADT (school events/seminars). Students 
 - **GET** `/api/events/:id/related` - Related events
 
 **Frontend:**
-- Home page with event cards (`/`)
+- Home page with featured events slider (`/`)
 - Event detail page (`/events/:id`)
 - Search & filter sidebar
 
-### 4. Ticket Booking
-- **POST** `/api/events/:id/book` - Book a ticket (decrement seat atomically)
+### 4. Ticket Booking & Seat Holds
+- **POST** `/api/events/:id/hold` - Select seat and create `Seat_Hold` (locks for 10 mins)
+- **POST** `/api/events/:id/book` - Confirm booking (consumes hold, generates Registration & QR)
 - **GET** `/api/bookings` - My bookings
 - **DELETE** `/api/bookings/:id` - Cancel booking (increment seat back)
 - **GET** `/api/bookings/:id/ticket` - Get ticket QR/code
 
+**Background Worker:**
+- **Seat Sweeper Job**: Runs every minute to release `Seat_Hold` locks older than 10 minutes.
+
 **Frontend:**
-- Book button on event detail
+- Visual seat layout selector
+- 10-minute countdown timer on booking page
 - My bookings page (`/dashboard/bookings`)
 - Ticket display with QR
 
@@ -94,11 +103,11 @@ Fullstack event management platform for CADT (school events/seminars). Students 
 - Student links Telegram account via bot `/start` command
 - Bot stores `chat_id` in User table
 - Notification triggers:
-  1. **Event reminder** - 24h before subscribed event
+  1. **Event reminder** - 24 hours AND 30 minutes before subscribed event (Scheduled via BullMQ)
   2. **Seat alert** - When favorite event has few seats left
   3. **New event** - Alert for subscribed categories
   4. **Booking confirmation** - Instant after booking
-  5. **Event update** - When event details change
+  5. **Event update** - When event schedule/location changes (Broadcast)
 
 ### API Endpoints
 - **POST** `/api/telegram/webhook` - Receive bot updates
@@ -117,7 +126,7 @@ Fullstack event management platform for CADT (school events/seminars). Students 
 - Event categories/tags
 - Pagination on all list endpoints
 - Image upload for events (Cloudinary or local)
-- Admin analytics dashboard (booking stats)
+- Admin analytics dashboard (historical data, engagement rates)
 - Responsive mobile design
 - Dark mode toggle
 - Error boundaries & loading states
@@ -155,6 +164,11 @@ npm install
 npx prisma migrate dev
 npm run dev          # http://localhost:4000
 
+# Worker (Background Jobs)
+# Start Redis locally (e.g., via Docker)
+docker run -d -p 6379:6379 redis
+npm run worker       # Assuming a separate script for BullMQ worker
+
 # Frontend
 cd frontend
 npm install
@@ -170,6 +184,7 @@ npx prisma generate
 ```
 DATABASE_URL="postgresql://user:pass@localhost:5432/cadt_events"
 DIRECT_URL="postgresql://user:pass@localhost:5432/cadt_events"
+REDIS_URL="redis://localhost:6379"
 JWT_SECRET="your-super-secret-jwt-key"
 JWT_REFRESH_SECRET="your-refresh-secret"
 TELEGRAM_BOT_TOKEN="your-bot-token"
