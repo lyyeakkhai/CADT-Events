@@ -1,4 +1,5 @@
 import { School, Search, Bell, Settings } from 'lucide-react';
+import { UserButton } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
 
 interface NavbarProps {
@@ -67,13 +68,7 @@ export default function Navbar({ currentView, setCurrentView, searchQuery, setSe
           <button className="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-all">
             <Settings size={20} />
           </button>
-          <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant overflow-hidden cursor-pointer" onClick={() => setCurrentView('dashboard')}>
-            <img 
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=100&auto=format&fit=crop" 
-              alt="Admin Profile" 
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <UserButton afterSignOutUrl="http://localhost:5173" />
         </div>
       </div>
     </header>

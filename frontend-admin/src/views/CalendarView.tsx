@@ -1,11 +1,11 @@
 import type { ViewType } from '../App';
-import { ChevronRight, ChevronLeft, DownloadCloud, Plus, Calendar as CalIcon, Clock, Category } from 'lucide-react';
+import { ChevronRight, ChevronLeft, DownloadCloud, Plus, Calendar as CalIcon, Clock } from 'lucide-react';
 
 export default function CalendarView({ onNavigate }: { onNavigate: (v: ViewType) => void }) {
   const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6 w-full fade-in">
+    <div className="w-full px-6 py-6 fade-in">
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <nav className="flex items-center gap-2 text-sm text-on-surface-variant mb-2">

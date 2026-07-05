@@ -4,7 +4,7 @@ This document outlines the critical "Priority 0" and "Priority 1" tasks that mus
 
 ---
 
-## Phase 1: Database & Data Layer (P0)
+## Phase 1: Database & Data Layer (P0) (DONE)
 
 **Goal:** Establish the single source of truth for the application.
 
@@ -18,7 +18,7 @@ This document outlines the critical "Priority 0" and "Priority 1" tasks that mus
    - Create `src/lib/prisma.ts` in the backend.
    - Export a globally instantiated Prisma client to prevent database connection exhaustion.
 
-## Phase 2: Authentication & Identity (P0)
+## Phase 2: Authentication & Identity (P0) (DONE)
 
 **Goal:** Secure the application and provide user context to all future features.
 
@@ -33,7 +33,7 @@ This document outlines the critical "Priority 0" and "Priority 1" tasks that mus
 4. **Protected Routes & Guards**
    - Create a `ProtectedRoute` component for React to redirect unauthenticated users to the `/login` route.
 
-## Phase 3: Global Architecture & Standards (P1)
+## Phase 3: Global Architecture & Standards (P1) (DONE)
 
 **Goal:** Standardize how the frontend communicates with the backend and how data is validated.
 
@@ -47,7 +47,7 @@ This document outlines the critical "Priority 0" and "Priority 1" tasks that mus
 3. **Linting & Formatting**
    - Ensure `eslint.config.js/mjs` and Prettier are strictly enforced across all workspaces to prevent merge conflicts.
 
-## Phase 4: UI/UX Foundation (P1)
+## Phase 4: UI/UX Foundation (P1) (DONE)
 
 **Goal:** Provide developers with ready-to-use building blocks so they don't have to write custom CSS for every feature.
 
@@ -57,7 +57,7 @@ This document outlines the critical "Priority 0" and "Priority 1" tasks that mus
    - Initialize Shadcn/UI in the frontend projects.
    - Generate and configure foundational components: `Button`, `Input`, `Dialog/Modal`, `Table`, `Toast/Sonner` (for alerts).
 
-## Phase 5: Infrastructure & Webhooks (P1 / P2)
+## Phase 5: Infrastructure & Webhooks (P1 / P2) (DONE)
 
 **Goal:** Set up asynchronous task handling and synchronize third-party state.
 

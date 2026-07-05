@@ -3,7 +3,7 @@ import { ChevronRight, CheckSquare, Filter, Calendar as CalIcon, Eye, FileText, 
 
 export default function ExportView({ onNavigate }: { onNavigate: (v: ViewType) => void }) {
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6 w-full fade-in">
+    <div className="w-full px-6 py-6 fade-in">
       <div className="mb-8">
         <nav className="flex items-center gap-2 text-sm text-on-surface-variant mb-3">
           <button onClick={() => onNavigate('dashboard')} className="hover:text-primary">Admin Dashboard</button>

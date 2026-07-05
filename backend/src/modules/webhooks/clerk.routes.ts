@@ -1,7 +1,8 @@
 import { Webhook } from 'svix';
 import { Router } from 'express';
 import bodyParser from 'body-parser';
-import { prisma } from '@/common/prisma/client';
+import { prisma } from '@/lib/prisma';
+import { clerkClient } from '@clerk/express';
 
 export const clerkWebhookRouter = Router();
 
@@ -45,9 +46,11 @@ clerkWebhookRouter.post('/', bodyParser.raw({ type: 'application/json' }), async
     const email = evt.data.email_addresses?.[0]?.email_address;
     const name = `${evt.data.first_name || ''} ${evt.data.last_name || ''}`.trim();
     
-    // Example: If email contains 'admin', set as ADMIN
+    // Explicitly define the admin email whitelist
     let role = 'STUDENT';
-    if (email && email.toLowerCase().includes('admin')) {
+    const adminEmails = ['admin123@stuff.cadt.edu.kh'];
+    
+    if (email && adminEmails.includes(email.toLowerCase())) {
       role = 'ADMIN';
     }
 
@@ -66,10 +69,18 @@ clerkWebhookRouter.post('/', bodyParser.raw({ type: 'application/json' }), async
           role: role as any,
         },
       });
+      
+      // Update Clerk so the frontend immediately knows their role without a DB query
+      await clerkClient.users.updateUserMetadata(id, {
+        publicMetadata: {
+          role: role,
+        },
+      });
+      
       console.log(`User ${id} processed successfully as ${role}.`);
     } catch (dbErr) {
-      console.error('Error syncing user to DB:', dbErr);
-      return res.status(500).json({ error: 'Database error' });
+      console.error('Error syncing user to DB or Clerk:', dbErr);
+      return res.status(500).json({ error: 'Database or Clerk error' });
     }
   }
 

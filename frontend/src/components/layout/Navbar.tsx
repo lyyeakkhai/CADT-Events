@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserButton } from '@clerk/clerk-react';
 import Logo from '../../assets/images/CADT Event Logo (1).png';
-import { useUrlSearch } from '../../../hooks/useUrlSearch';
+import { useUrlSearch } from '../../hooks/useUrlSearch';
 
 interface NavbarProps {
   activeTab: 'Discover' | 'My Booking' | 'Calendar' | 'About';
