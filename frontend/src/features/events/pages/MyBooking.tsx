@@ -1,43 +1,47 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import drone from '../../../assets/images/drone.jpg';
-
-interface PastBooking {
-  id: number;
-  title: string;
-  date: string;
-  venue: string;
-  status: 'Completed' | 'Cancelled';
-  image: string;
-}
-
-const PAST_BOOKINGS: PastBooking[] = [
-  {
-    id: 1,
-    title: 'Data Science Workshop',
-    date: 'August 12, 2024',
-    venue: 'Tech Lab 1',
-    status: 'Completed',
-    image: drone,
-  },
-  {
-    id: 2,
-    title: 'Annual Career Fair',
-    date: 'July 05, 2024',
-    venue: 'Main Exhibition Hall',
-    status: 'Completed',
-    image: drone,
-  },
-  {
-    id: 3,
-    title: 'Guest Lecture: AI Ethics',
-    date: 'May 21, 2024',
-    venue: 'Seminar Room B',
-    status: 'Completed',
-    image: drone,
-  },
-];
+import { useEventsApi, type ApiBooking } from '../../../services/api';
 
 export default function MyBooking() {
+  const { getMyBookings, cancelBooking } = useEventsApi();
+  const [bookings, setBookings] = useState<ApiBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    getMyBookings()
+      .then(res => {
+        if (active) setBookings(res);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const handleCancel = async (id: string) => {
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    try {
+      await cancelBooking(id);
+      setBookings(bookings.map(b => b.id === id ? { ...b, status: 'CANCELLED' } : b));
+    } catch (err: any) {
+      alert(err.message || 'Failed to cancel');
+    }
+  };
+
+  const nextBooking = bookings.find(b => b.status === 'CONFIRMED');
+  const pastBookings = bookings.filter(b => b.status !== 'CONFIRMED' || b !== nextBooking);
+
+  if (loading) {
+    return (
+      <div className="w-full bg-[#f8fafc] min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
   return (
     <main className="w-full bg-[#f8fafc] min-h-screen font-sans antialiased selection:bg-blue-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
@@ -56,23 +60,25 @@ export default function MyBooking() {
           </div>
 
           {/* Next Event Card */}
+          {nextBooking ? (
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
             <div className="flex flex-col md:flex-row">
 
               {/* Hero Image */}
               <div className="relative w-full md:w-[420px] h-[260px] md:h-auto shrink-0 bg-slate-900">
                 <img
-                  src={drone}
-                  alt="Innovation Summit 2024"
+                  src={nextBooking.event.coverImageUrl || drone}
+                  alt={nextBooking.event.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-luminosity"
+                  onError={(e: any) => { e.target.src = drone; }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
                 <div className="relative z-10 h-full flex flex-col justify-end p-6">
                   <span className="text-[11px] font-black tracking-widest uppercase text-white/80 mb-1">
-                    Coming Up In 3 Days
+                    Confirmed
                   </span>
                   <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    Innovation Summit 2024
+                    {nextBooking.event.title}
                   </h3>
                 </div>
               </div>
@@ -89,7 +95,9 @@ export default function MyBooking() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Date</p>
-                      <p className="text-sm font-extrabold text-slate-900">Oct 24, 2024</p>
+                      <p className="text-sm font-extrabold text-slate-900">
+                        {new Date(nextBooking.event.startTimestamp).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
 
@@ -101,7 +109,9 @@ export default function MyBooking() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Time</p>
-                      <p className="text-sm font-extrabold text-slate-900">09:00 AM - 05:00 PM</p>
+                      <p className="text-sm font-extrabold text-slate-900">
+                        {new Date(nextBooking.event.startTimestamp).toLocaleTimeString()}
+                      </p>
                     </div>
                   </div>
 
@@ -114,7 +124,7 @@ export default function MyBooking() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Venue</p>
-                      <p className="text-sm font-extrabold text-slate-900">Grand Auditiorium, CADT</p>
+                      <p className="text-sm font-extrabold text-slate-900 line-clamp-1">{nextBooking.event.venue?.name || 'TBA'}</p>
                     </div>
                   </div>
 
@@ -127,7 +137,7 @@ export default function MyBooking() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Booking ID</p>
-                      <p className="text-sm font-extrabold text-slate-900">#EVT-9921-X</p>
+                      <p className="text-sm font-extrabold text-slate-900">{nextBooking.bookingReferenceId}</p>
                     </div>
                   </div>
                 </div>
@@ -147,7 +157,7 @@ export default function MyBooking() {
                     </svg>
                     Modify Booking
                   </button>
-                  <button className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 font-extrabold text-xs px-5 py-3 rounded-xl transition-colors cursor-pointer">
+                  <button onClick={() => handleCancel(nextBooking.id)} className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 font-extrabold text-xs px-5 py-3 rounded-xl transition-colors cursor-pointer">
                     Cancel
                   </button>
                 </div>
@@ -155,6 +165,11 @@ export default function MyBooking() {
               </div>
             </div>
           </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500">
+              No upcoming confirmed events.
+            </div>
+          )}
 
           {/* Past Bookings */}
           <div className="flex items-center justify-between pt-2">
@@ -165,19 +180,22 @@ export default function MyBooking() {
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs divide-y divide-slate-100 overflow-hidden">
-            {PAST_BOOKINGS.map((booking) => (
+            {pastBookings.length === 0 && (
+              <div className="p-6 text-center text-sm text-slate-500">No past or cancelled bookings found.</div>
+            )}
+            {pastBookings.map((booking) => (
               <div
                 key={booking.id}
                 className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors"
               >
                 <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-900">
-                  <img src={booking.image} alt={booking.title} className="w-full h-full object-cover opacity-80" />
+                  <img src={booking.event.coverImageUrl || drone} alt={booking.event.title} className="w-full h-full object-cover opacity-80" onError={(e:any) => e.target.src = drone} />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-extrabold text-slate-900 truncate">{booking.title}</p>
+                  <p className="text-sm font-extrabold text-slate-900 truncate">{booking.event.title}</p>
                   <p className="text-xs font-semibold text-slate-400 mt-0.5">
-                    {booking.date} &bull; {booking.venue}
+                    {new Date(booking.event.startTimestamp).toLocaleDateString()} &bull; {booking.event.venue?.name || 'TBA'}
                   </p>
                 </div>
 

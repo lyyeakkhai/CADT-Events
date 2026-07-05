@@ -1,19 +1,44 @@
+import { useState, useEffect } from 'react';
 import type { ViewType } from '../App';
-import { DownloadCloud, Plus, Filter, Users, Calendar, PieChart, Activity, MoreVertical, Edit2, Bell } from 'lucide-react';
+import { DownloadCloud, Plus, Filter, Users, Calendar, PieChart, Activity, MoreVertical, Edit2, Bell, Loader2 } from 'lucide-react';
+import apiClient from '../lib/apiClient';
+
+interface DashboardEvent {
+  id: string;
+  title: string;
+  eventType: string | null;
+  startTimestamp: string;
+  endTimestamp: string;
+  location: string | null;
+  status: string;
+  _count: { bookings: number };
+  capacity: number; // if not present, we will default to something
+}
 
 export default function DashboardView({ onNavigate, searchQuery = '' }: { onNavigate: (v: ViewType) => void, searchQuery?: string }) {
-  const allEvents = [
-    { title: "Tech Innovators Summit", id: "EV-9901", loc: "HQ Room 402", date: "Oct 24, 2024", type: "WORKSHOP", cap: "45/50", pct: 90, status: "ACTIVE", stCol: "text-secondary bg-secondary-container/30", dot: "bg-secondary" },
-    { title: "CADT Career Fair", id: "EV-9884", loc: "Main Hall", date: "Nov 02, 2024", type: "SEMINAR", cap: "120/500", pct: 24, status: "UPCOMING", stCol: "text-primary bg-primary/10", dot: "bg-primary" },
-    { title: "Introduction to Blockchain", id: "EV-9712", loc: "Virtual Session", date: "Oct 12, 2024", type: "TECH TALK", cap: "30/30", pct: 100, status: "COMPLETED", stCol: "text-on-surface-variant bg-surface-container-highest/50", dot: "bg-outline-variant", full: true },
-    { title: "Hackathon 2024 Prep", id: "EV-9555", loc: "Innovation Lab", date: "Nov 15, 2024", type: "COMPETITION", cap: "88/200", pct: 44, status: "UPCOMING", stCol: "text-primary bg-primary/10", dot: "bg-primary" },
-  ];
+  const [events, setEvents] = useState<DashboardEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredEvents = allEvents.filter(e => 
+  useEffect(() => {
+    let active = true;
+    apiClient.get('/events/all')
+      .then(res => {
+        if (active) setEvents(res.data.data);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const filteredEvents = events.filter(e => 
     e.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    e.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (e.eventType || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     e.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const totalBookings = events.reduce((sum, e) => sum + (e._count?.bookings || 0), 0);
 
   return (
     <div className="w-full px-6 py-6 fade-in">
@@ -49,8 +74,8 @@ export default function DashboardView({ onNavigate, searchQuery = '' }: { onNavi
       {/* Stat Cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[
-          { icon: Calendar, iconBg: "bg-amber-50", iconColor: "text-amber-600", label: "Total Events", value: "124", sub: "+12%", subColor: "text-emerald-600" },
-          { icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600", label: "Total Registrations", value: "8,432", sub: "+2.4k", subColor: "text-emerald-600" },
+          { icon: Calendar, iconBg: "bg-amber-50", iconColor: "text-amber-600", label: "Total Events", value: loading ? '-' : events.length, sub: "All time", subColor: "text-slate-500" },
+          { icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600", label: "Total Registrations", value: loading ? '-' : totalBookings, sub: "Confirmed", subColor: "text-emerald-600" },
           { icon: PieChart, iconBg: "bg-violet-50", iconColor: "text-violet-600", label: "System Cap", value: "76%", sub: "System Cap", subColor: "text-slate-500", isProgress: true },
           { icon: Activity, iconBg: "bg-slate-100", iconColor: "text-slate-600", label: "New User Signups", value: "243", sub: "Active Now", subColor: "text-emerald-600" },
         ].map((stat, i) => (
@@ -138,31 +163,42 @@ export default function DashboardView({ onNavigate, searchQuery = '' }: { onNavi
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredEvents.length > 0 ? (
-                    filteredEvents.map((row, i) => (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                        Loading events...
+                      </td>
+                    </tr>
+                  ) : filteredEvents.length > 0 ? (
+                    filteredEvents.map((row, i) => {
+                      const cap = row.capacity || 100; // Fake capacity if null
+                      const pct = Math.round((row._count.bookings / cap) * 100);
+                      const full = pct >= 100;
+                      return (
                       <tr key={i} className="hover:bg-slate-50/70 transition-colors bg-white">
                         <td className="p-4">
                           <div className="font-bold text-slate-900">{row.title}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">ID: #{row.id} • {row.loc}</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">ID: #{row.id.slice(0, 8)} • {row.location || 'TBA'}</div>
                         </td>
-                        <td className="p-4 text-sm text-slate-700">{row.date}</td>
+                        <td className="p-4 text-sm text-slate-700">{new Date(row.startTimestamp).toLocaleDateString()}</td>
                         <td className="p-4">
-                          <span className="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-[10px] font-bold uppercase tracking-wider">{row.type}</span>
+                          <span className="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-full text-[10px] font-bold uppercase tracking-wider">{row.eventType || 'Event'}</span>
                         </td>
                         <td className="p-4">
                           <div className="flex flex-col gap-1 w-24">
                             <div className="flex justify-between text-[11px]">
-                              <span className="font-bold text-slate-700">{row.cap}</span>
-                              <span className={`font-semibold ${row.full ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>{row.full ? 'FULL' : `${row.pct}%`}</span>
+                              <span className="font-bold text-slate-700">{row._count.bookings}/{cap}</span>
+                              <span className={`font-semibold ${full ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>{full ? 'FULL' : `${pct}%`}</span>
                             </div>
                             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${row.full ? 'bg-emerald-500' : 'bg-amber-400'}`} style={{ width: `${row.pct}%` }}></div>
+                              <div className={`h-full rounded-full ${full ? 'bg-emerald-500' : 'bg-amber-400'}`} style={{ width: `${pct}%` }}></div>
                             </div>
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${row.stCol}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${row.dot}`}></span>
+                          <span className={`inline-flex items-center px-2.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${row.status === 'PUBLISHED' ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-slate-600 bg-slate-100 border border-slate-200'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${row.status === 'PUBLISHED' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
                             {row.status}
                           </span>
                         </td>
@@ -172,11 +208,11 @@ export default function DashboardView({ onNavigate, searchQuery = '' }: { onNavi
                           </button>
                         </td>
                       </tr>
-                    ))
+                    )})
                   ) : (
                     <tr>
                       <td colSpan={6} className="p-8 text-center text-slate-400 text-sm font-medium">
-                        No events found matching your search criteria.
+                        No events found.
                       </td>
                     </tr>
                   )}

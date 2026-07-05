@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import type { AcademicEvent } from '../data/eventData';
 import hidetoheal from '../../../assets/images/hidetoheal.jpg';
+import { useEventsApi } from '../../../services/api';
+import { Loader2 } from 'lucide-react';
 
 interface SeatSelectionProps {
   event: AcademicEvent;
   onBackClick: () => void;
-  onRegisterClick: (event: AcademicEvent, seat: string) => void;
+  onRegisterClick: (event: AcademicEvent, seat: string, bookingId: string) => void;
 }
 
 type SeatStatus = 'available' | 'selected' | 'occupied';
@@ -76,6 +78,25 @@ const COLS = 11;
 
 export default function SeatSelection({ event, onBackClick, onRegisterClick }: SeatSelectionProps) {
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const { bookEvent } = useEventsApi();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleRegister = async () => {
+    if (!selectedSeat) return;
+    setSubmitting(true);
+    try {
+      let bookingId = 'MOCK-ID';
+      if (event._apiId) {
+        const booking = await bookEvent(event._apiId);
+        bookingId = booking.bookingReferenceId;
+      }
+      onRegisterClick(event, selectedSeat, bookingId);
+    } catch (err: any) {
+      alert(err.message || 'Failed to book event');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const zoneASeats = useMemo(() => generateZone(ZONE_A_ROWS, COLS, ZONE_A_OCCUPIED), []);
   const zoneBSeats = useMemo(() => generateZone(ZONE_B_ROWS, COLS, ZONE_B_OCCUPIED), []);
@@ -288,16 +309,16 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
               </div>
 
               <button
-                onClick={() => selectedSeat && onRegisterClick(event, selectedSeat)}
-                disabled={!selectedSeat}
+                onClick={handleRegister}
+                disabled={!selectedSeat || submitting}
                 className={`w-full py-3 rounded-xl text-sm font-extrabold tracking-wide flex items-center justify-center gap-2 transition-all duration-150 ${
-                  selectedSeat
+                  selectedSeat && !submitting
                     ? 'bg-slate-900 hover:bg-blue-900 text-white shadow-sm hover:shadow active:scale-[0.98] cursor-pointer'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                Register for Free
-                {selectedSeat && (
+                {submitting ? <Loader2 className="animate-spin" size={18} /> : 'Register for Free'}
+                {selectedSeat && !submitting && (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>

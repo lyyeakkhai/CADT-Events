@@ -1,10 +1,30 @@
-import React, { useState, useMemo } from 'react';
-// Import professional vectors from the package
-import { Search, Calendar, RotateCcw, X, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Calendar, RotateCcw, X, SlidersHorizontal, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import EventCard from '../../../components/EventCard';
 import { FIGMA_EVENTS_DATA } from '../data/eventData';
 import type { AcademicEvent } from '../data/eventData';
+import { getEvents, type ApiEvent } from '../../../services/api';
 import { useUrlSearch } from '../../../hooks/useUrlSearch';
+
+// Convert backend ApiEvent to the local AcademicEvent shape the UI expects
+function toAcademicEvent(e: ApiEvent): AcademicEvent {
+  return {
+    id: e.id as any,
+    title: e.title,
+    speaker: e.speakers?.[0]?.speaker?.name ?? 'CADT',
+    date: new Date(e.startTimestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    time: new Date(e.startTimestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    venue: e.venue?.name ?? 'TBA',
+    dept: 'All',
+    type: (e.eventType as AcademicEvent['type']) ?? 'Seminar',
+    badge: e.eventType ?? 'Event',
+    image: e.coverImageUrl ?? '',
+    description: e.description,
+    isFeatured: e.isFeatured,
+    // Keep original id for API calls
+    _apiId: e.id,
+  } as AcademicEvent & { _apiId: string };
+}
 
 interface DiscoveryFeedProps {
   onSelectEvent?: (event: AcademicEvent) => void;
@@ -16,23 +36,45 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
   const [selectedDept, setSelectedDept] = useState<string>('All');
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>('This Month');
   const [currentSlide, setCurrentSlide] = useState<number>(0);
+  const [apiEvents, setApiEvents] = useState<AcademicEvent[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch from backend; fall back to mock data if it fails
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getEvents()
+      .then((res) => {
+        if (!cancelled) {
+          setApiEvents(res.data.map(toAcademicEvent));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setApiEvents(null); // will fall back to FIGMA_EVENTS_DATA
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const allEvents = apiEvents ?? FIGMA_EVENTS_DATA;
 
   const featuredEvents = useMemo(() => {
-  return FIGMA_EVENTS_DATA.filter(event => event.isFeatured === true); // ✅ Match lowercase 'isFeatured'
-}, []);
+    return allEvents.filter(event => event.isFeatured === true);
+  }, [allEvents]);
 
   const filteredEvents = useMemo(() => {
-    return FIGMA_EVENTS_DATA.filter(event => {
+    return allEvents.filter(event => {
       const matchesDept = selectedDept === 'All' || event.dept === selectedDept || event.dept === 'All';
       const cleanQuery = searchQuery.toLowerCase().trim();
-      const matchesSearch = 
+      const matchesSearch =
         event.title.toLowerCase().includes(cleanQuery) ||
         event.speaker.toLowerCase().includes(cleanQuery) ||
         (event.description && event.description.toLowerCase().includes(cleanQuery));
-
       return matchesDept && matchesSearch;
     });
-  }, [selectedDept, searchQuery]);
+  }, [allEvents, selectedDept, searchQuery]);
 
   const nextSlide = () => {
     if (featuredEvents.length === 0) return;
@@ -49,6 +91,25 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
     setSelectedDept('All');
     setSelectedTimeframe('This Month');
   };
+
+  if (loading) {
+    return (
+      <div className="w-full flex flex-col bg-slate-50">
+        <div className="w-full h-[340px] md:h-[400px] bg-slate-900 animate-pulse" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+          <div className="flex items-center gap-2 text-slate-500 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Loading events...
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="bg-white rounded-xl border border-slate-100 h-64 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col bg-slate-50">

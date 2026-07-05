@@ -17,6 +17,7 @@ export interface AcademicEvent {
   image: string;
   description: string;
   isFeatured?: boolean;
+  _apiId?: string;
 }
 
 export const FIGMA_EVENTS_DATA: AcademicEvent[] = [

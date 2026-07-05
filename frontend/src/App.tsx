@@ -114,7 +114,7 @@ function LoginView() {
                   colorTextSecondary: '#64748b',
                   colorBackground: '#ffffff',
                   colorInputBackground: '#f8fafc',
-                  colorInputBorder: '#e2e8f0',
+                  colorInputText: '#0f172a',
                   borderRadius: '0.75rem',
                 },
                 elements: {
