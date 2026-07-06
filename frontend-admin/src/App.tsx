@@ -71,7 +71,7 @@ function AdminApp() {
           {currentView === 'calendar' && <CalendarView onNavigate={setCurrentView} />}
           {currentView === 'create' && <CreateEventView onNavigate={setCurrentView} />}
           {currentView === 'settings' && <SettingsView onNavigate={setCurrentView} />}
-          {currentView === 'notifications' && <NotificationsView onNavigate={setCurrentView} />}
+          {currentView === 'notifications' && <NotificationsView />}
 
         </main>
       </div>

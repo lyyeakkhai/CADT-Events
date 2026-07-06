@@ -11,11 +11,7 @@ export interface Notification {
   type: 'alert' | 'event' | 'system';
 }
 
-interface NotificationsViewProps {
-  onNavigate: (view: ViewType) => void;
-}
-
-export default function NotificationsView({ onNavigate }: NotificationsViewProps) {
+export default function NotificationsView() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
