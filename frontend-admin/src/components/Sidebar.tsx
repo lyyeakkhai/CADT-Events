@@ -12,7 +12,6 @@ import {
 import { UserButton } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
 import Logo from '../assets/logo.png';
-import NotificationDropdown from './NotificationDropdown';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -70,7 +69,16 @@ export default function Sidebar({ currentView, setCurrentView, isCollapsed, setI
       {/* Bottom Controls */}
       <div className="sidebar-bottom">
         {/* Notification bell */}
-        <NotificationDropdown variant="sidebar" isCollapsed={isCollapsed} />
+        <button
+          className={`sidebar-item ${currentView === 'notifications' ? 'sidebar-item-active' : ''}`}
+          title={isCollapsed ? 'Notifications' : undefined}
+          onClick={() => setCurrentView('notifications')}
+        >
+          <Bell size={19} className="sidebar-item-icon" />
+          {!isCollapsed && <span className="sidebar-item-label">Notifications</span>}
+          {notifCount > 0 && <span className="sidebar-badge">{notifCount}</span>}
+          {currentView === 'notifications' && !isCollapsed && <span className="sidebar-active-dot" />}
+        </button>
 
         {/* Settings */}
         <button
