@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Bell, BellOff, Check, Clock, CalendarDays, AlertTriangle } from 'lucide-react';
-import type { ViewType } from '../App';
 
 export interface Notification {
   id: string;
