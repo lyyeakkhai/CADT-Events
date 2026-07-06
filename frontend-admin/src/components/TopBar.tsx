@@ -1,5 +1,6 @@
-import { Search, Bell } from 'lucide-react';
+import { Search } from 'lucide-react';
 import type { ViewType } from '../App';
+import NotificationDropdown from './NotificationDropdown';
 
 interface TopBarProps {
   currentView: ViewType;
@@ -61,10 +62,7 @@ export default function TopBar({ currentView, searchQuery, setSearchQuery, setCu
         </div>
 
         {/* Notification bell */}
-        <button className="topbar-icon-btn relative">
-          <Bell size={18} />
-          <span className="topbar-notif-dot" />
-        </button>
+        <NotificationDropdown />
       </div>
     </header>
   );
