@@ -31,10 +31,8 @@ export default function NotificationDropdown() {
     const fetchNotifications = async () => {
       setLoading(true);
       try {
-        // Simulating an API call
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        // Return dummy data
         const dummyData: Notification[] = [
           { id: '1', title: 'New Event Registration', message: 'John Doe registered for Tech Expo.', read: false, timestamp: '10 min ago' },
           { id: '2', title: 'System Update', message: 'Maintenance scheduled for tonight at 2 AM.', read: false, timestamp: '1 hour ago' },
@@ -62,23 +60,23 @@ export default function NotificationDropdown() {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative flex items-center" ref={dropdownRef}>
       <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="topbar-icon-btn relative hover:bg-surface-container-low transition-colors p-2 rounded-full"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="topbar-icon-btn relative"
       >
-        <Bell size={18} className="text-on-surface" />
-        {hasUnread && <span className="topbar-notif-dot absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
+        <Bell size={18} />
+        {hasUnread && <span className="topbar-notif-dot" />}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-lg shadow-black/5 z-50 overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-low/50">
-            <h3 className="font-bold text-primary">Notifications</h3>
+        <div className="absolute right-0 top-[120%] mt-2 w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/50">
+            <h3 className="font-bold text-white">Notifications</h3>
             {hasUnread && (
               <button 
                 onClick={markAllAsRead}
-                className="text-xs text-primary/80 hover:text-primary flex items-center gap-1 transition-colors"
+                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
               >
                 <Check size={14} /> Mark all read
               </button>
@@ -88,28 +86,28 @@ export default function NotificationDropdown() {
           <div className="max-h-[400px] overflow-y-auto">
             {loading ? (
               <div className="flex justify-center p-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-10 text-center">
-                <BellOff size={32} className="text-outline-variant mb-3" />
-                <p className="text-on-surface-variant font-medium">No notifications</p>
-                <p className="text-xs text-outline mt-1">You're all caught up!</p>
+                <BellOff size={32} className="text-slate-500 mb-3" />
+                <p className="text-slate-400 font-medium">No notifications</p>
+                <p className="text-xs text-slate-500 mt-1">You're all caught up!</p>
               </div>
             ) : (
-              <ul className="divide-y divide-outline-variant/20">
+              <ul className="divide-y divide-slate-700/50">
                 {notifications.map(notif => (
                   <li 
                     key={notif.id} 
-                    className={`p-4 hover:bg-surface-container-low transition-colors cursor-pointer ${notif.read ? 'opacity-70' : 'bg-primary/[0.02]'}`}
+                    className={`p-4 hover:bg-slate-800 transition-colors cursor-pointer ${notif.read ? 'opacity-70' : 'bg-blue-900/10'}`}
                     onClick={() => markAsRead(notif.id)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${notif.read ? 'bg-transparent' : 'bg-primary'}`}></div>
+                      <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${notif.read ? 'bg-transparent' : 'bg-blue-500'}`}></div>
                       <div>
-                        <h4 className={`text-sm ${notif.read ? 'font-medium text-on-surface' : 'font-bold text-primary'}`}>{notif.title}</h4>
-                        <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">{notif.message}</p>
-                        <span className="text-[10px] text-outline mt-2 block font-medium uppercase tracking-wider">{notif.timestamp}</span>
+                        <h4 className={`text-sm ${notif.read ? 'font-medium text-slate-300' : 'font-bold text-white'}`}>{notif.title}</h4>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">{notif.message}</p>
+                        <span className="text-[10px] text-slate-500 mt-2 block font-medium uppercase tracking-wider">{notif.timestamp}</span>
                       </div>
                     </div>
                   </li>
