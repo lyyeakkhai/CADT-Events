@@ -9,7 +9,12 @@ export interface Notification {
   timestamp: string;
 }
 
-export default function NotificationDropdown() {
+interface Props {
+  variant?: 'topbar' | 'sidebar';
+  isCollapsed?: boolean;
+}
+
+export default function NotificationDropdown({ variant = 'topbar', isCollapsed = false }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -50,6 +55,7 @@ export default function NotificationDropdown() {
   }, []);
 
   const hasUnread = notifications.some(n => !n.read);
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -60,17 +66,33 @@ export default function NotificationDropdown() {
   };
 
   return (
-    <div className="relative flex items-center" ref={dropdownRef}>
-      <button 
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="topbar-icon-btn relative"
-      >
-        <Bell size={18} />
-        {hasUnread && <span className="topbar-notif-dot" />}
-      </button>
+    <div className={`relative ${variant === 'topbar' ? 'flex items-center' : 'w-full'}`} ref={dropdownRef}>
+      {variant === 'topbar' ? (
+        <button 
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="topbar-icon-btn relative"
+        >
+          <Bell size={18} />
+          {hasUnread && <span className="topbar-notif-dot" />}
+        </button>
+      ) : (
+        <button
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="sidebar-item relative w-full text-left"
+          title={isCollapsed ? 'Notifications' : undefined}
+        >
+          <Bell size={19} className="sidebar-item-icon" />
+          {!isCollapsed && <span className="sidebar-item-label">Notifications</span>}
+          {hasUnread && (
+            <span className="sidebar-badge">{unreadCount}</span>
+          )}
+        </button>
+      )}
 
       {isOpen && (
-        <div className="absolute right-0 top-[120%] mt-2 w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+        <div 
+          className={`absolute ${variant === 'topbar' ? 'right-0 top-[120%]' : 'left-[105%] bottom-0'} mt-2 w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-[999] overflow-hidden flex flex-col`}
+        >
           <div className="p-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/50">
             <h3 className="font-bold text-white">Notifications</h3>
             {hasUnread && (
