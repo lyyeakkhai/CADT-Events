@@ -27,6 +27,7 @@ const navItems = [
   { id: 'export' as ViewType, label: 'Export', icon: Download },
 ];
 
+
 export default function Sidebar({ currentView, setCurrentView, isCollapsed, setIsCollapsed }: SidebarProps) {
   const [notifCount] = useState(3);
 
@@ -81,12 +82,15 @@ export default function Sidebar({ currentView, setCurrentView, isCollapsed, setI
 
         {/* Settings */}
         <button
-          className="sidebar-item"
+          className={`sidebar-item ${currentView === 'settings' ? 'sidebar-item-active' : ''}`}
           title={isCollapsed ? 'Settings' : undefined}
+          onClick={() => setCurrentView('settings')}
         >
           <Settings size={19} className="sidebar-item-icon" />
           {!isCollapsed && <span className="sidebar-item-label">Settings</span>}
+          {currentView === 'settings' && !isCollapsed && <span className="sidebar-active-dot" />}
         </button>
+
 
         <div className="sidebar-divider" />
 

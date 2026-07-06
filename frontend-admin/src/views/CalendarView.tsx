@@ -1,9 +1,51 @@
+import { useRef, useState } from 'react';
 import type { ViewType } from '../App';
 import { ChevronRight, ChevronLeft, DownloadCloud, Plus, Calendar as CalIcon, Clock } from 'lucide-react';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import { format } from 'date-fns';
+import './Calendar.css';
 
 export default function CalendarView({ onNavigate }: { onNavigate: (v: ViewType) => void }) {
-  const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  
+  const calendarRef = useRef<FullCalendar>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState('dayGridMonth');
+
+  const handlePrev = () => {
+    const calendarApi = calendarRef.current?.getApi();
+    calendarApi?.prev();
+    if (calendarApi) setCurrentDate(calendarApi.getDate());
+  };
+
+  const handleNext = () => {
+    const calendarApi = calendarRef.current?.getApi();
+    calendarApi?.next();
+    if (calendarApi) setCurrentDate(calendarApi.getDate());
+  };
+
+  const handleToday = () => {
+    const calendarApi = calendarRef.current?.getApi();
+    calendarApi?.today();
+    if (calendarApi) setCurrentDate(calendarApi.getDate());
+  };
+
+  const changeView = (viewName: string) => {
+    const calendarApi = calendarRef.current?.getApi();
+    calendarApi?.changeView(viewName);
+    setCurrentView(viewName);
+  };
+
+  // Dummy events
+  const events = [
+    { id: '1', title: 'AI Ethics Seminar', start: '2024-10-03T09:00:00', end: '2024-10-03T11:00:00', extendedProps: { location: 'Hall A', category: 'technology' } },
+    { id: '2', title: 'Web Dev Hub', start: '2024-10-07T14:00:00', extendedProps: { location: 'Lab 3', category: 'technology' } },
+    { id: '3', title: 'Startup Pitch Day', start: '2024-10-10T10:30:00', extendedProps: { location: 'Innovation Hub', category: 'business' } },
+    { id: '4', title: 'Design Jam', start: '2024-10-10T13:00:00', extendedProps: { location: 'Studio 1', category: 'innovation' } },
+    { id: '5', title: 'Annual Tech Expo', start: '2024-10-23T08:00:00', end: '2024-10-25T18:00:00', extendedProps: { location: 'Campus', category: 'technology' } },
+  ];
+
   return (
     <div className="w-full px-6 py-6 fade-in">
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -35,57 +77,52 @@ export default function CalendarView({ onNavigate }: { onNavigate: (v: ViewType)
           <div className="glass-card p-3 rounded-xl flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1">
-                <button className="p-2 hover:bg-surface-container rounded-full text-primary transition-all"><ChevronLeft size={20}/></button>
-                <h2 className="text-xl font-bold text-primary min-w-[160px] text-center">October 2024</h2>
-                <button className="p-2 hover:bg-surface-container rounded-full text-primary transition-all"><ChevronRight size={20}/></button>
+                <button onClick={handlePrev} className="p-2 hover:bg-surface-container rounded-full text-primary transition-all"><ChevronLeft size={20}/></button>
+                <h2 className="text-xl font-bold text-primary min-w-[160px] text-center">
+                  {format(currentDate, 'MMMM yyyy')}
+                </h2>
+                <button onClick={handleNext} className="p-2 hover:bg-surface-container rounded-full text-primary transition-all"><ChevronRight size={20}/></button>
               </div>
-              <button className="px-4 py-1.5 border border-outline-variant rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-low transition-all">Today</button>
+              <button onClick={handleToday} className="px-4 py-1.5 border border-outline-variant rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-low transition-all">Today</button>
             </div>
             <div className="flex bg-surface-container-low rounded-lg p-1 border border-outline-variant/60">
-              <button className="px-4 py-1.5 bg-primary text-white font-bold rounded-md shadow-sm text-sm">Month</button>
-              <button className="px-4 py-1.5 text-on-surface-variant hover:text-primary transition-colors text-sm">Week</button>
-              <button className="px-4 py-1.5 text-on-surface-variant hover:text-primary transition-colors text-sm">Day</button>
+              <button 
+                onClick={() => changeView('dayGridMonth')} 
+                className={`px-4 py-1.5 rounded-md text-sm transition-colors ${currentView === 'dayGridMonth' ? 'bg-primary text-white font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}>
+                Month
+              </button>
+              <button 
+                onClick={() => changeView('timeGridWeek')}
+                className={`px-4 py-1.5 rounded-md text-sm transition-colors ${currentView === 'timeGridWeek' ? 'bg-primary text-white font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}>
+                Week
+              </button>
+              <button 
+                onClick={() => changeView('timeGridDay')}
+                className={`px-4 py-1.5 rounded-md text-sm transition-colors ${currentView === 'timeGridDay' ? 'bg-primary text-white font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}>
+                Day
+              </button>
             </div>
           </div>
 
-          <div className="glass-card rounded-xl overflow-hidden shadow-sm flex flex-col bg-surface-container-lowest border border-outline-variant/50">
-            <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-container-low/50">
-              {days.map((d, i) => (
-                <div key={d} className={`py-3 text-center text-xs font-bold text-on-surface-variant tracking-wider ${i < 6 ? 'border-r border-outline-variant/50' : ''}`}>
-                  {d}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 grid-rows-5 h-[600px] lg:h-[700px] bg-white">
-               {/* Just a highly simplified mockup of grid logic */}
-               {Array.from({length: 35}).map((_, i) => {
-                 const dayNum = i - 1; // start oct 1 at tue (idx 2)
-                 const isCurrentMonth = dayNum > 0 && dayNum <= 31;
-                 const cellBorder = `${(i+1)%7 !== 0 ? 'border-r' : ''} ${i < 28 ? 'border-b' : ''} border-outline-variant/30`;
-                 
-                 return (
-                   <div key={i} className={`p-2 relative ${cellBorder} hover:bg-primary/[0.02] transition-colors ${!isCurrentMonth? 'bg-surface-container-low/30' : ''}`}>
-                      <span className={`text-sm ${isCurrentMonth ? 'font-semibold text-on-surface' : 'text-outline'}`}>
-                        {isCurrentMonth ? dayNum : (dayNum <= 0 ? 29 + i : dayNum - 31)}
-                      </span>
-                      {dayNum === 3 && (
-                        <div className="mt-1 bg-secondary/10 text-secondary px-1.5 py-0.5 rounded text-[10px] font-bold border-l-2 border-secondary truncate">AI Ethics Seminar</div>
-                      )}
-                      {dayNum === 7 && (
-                        <div className="mt-1 bg-badge-tech text-white px-1.5 py-0.5 rounded text-[10px] font-bold truncate">Web Dev Hub</div>
-                      )}
-                      {dayNum === 10 && (
-                        <div className="mt-1 space-y-1">
-                          <div className="bg-badge-business/10 text-badge-business px-1.5 py-0.5 rounded text-[10px] font-bold border-l-2 border-badge-business truncate">Startup Pitch</div>
-                          <div className="bg-secondary/10 text-secondary px-1.5 py-0.5 rounded text-[10px] font-bold border-l-2 border-secondary truncate">Design Jam</div>
-                        </div>
-                      )}
-                      {dayNum === 23 && (
-                         <div className="mt-1 bg-badge-tech text-white px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm truncate">Annual Tech Expo</div>
-                      )}
-                   </div>
-                 );
-               })}
+          <div className="glass-card p-4 rounded-xl shadow-sm flex flex-col bg-surface-container-lowest border border-outline-variant/50">
+            <div className="custom-calendar-wrapper">
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                initialView="dayGridMonth"
+                headerToolbar={false}
+                events={events}
+                height={700}
+                selectable={true}
+                selectMirror={true}
+                dayMaxEvents={true}
+                eventClick={(info) => {
+                  alert(`Event: ${info.event.title}\nLocation: ${info.event.extendedProps.location || 'N/A'}`);
+                }}
+                dateClick={() => {
+                  onNavigate('create');
+                }}
+              />
             </div>
           </div>
         </div>

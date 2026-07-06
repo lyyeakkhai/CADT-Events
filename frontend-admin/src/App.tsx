@@ -11,8 +11,9 @@ import ExportView from './views/ExportView';
 import CalendarView from './views/CalendarView';
 import CreateEventView from './views/CreateEventView';
 import ProtectedRoute from './components/ProtectedRoute';
+import SettingsView from './views/SettingsView';
 
-export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create';
+export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create' | 'settings';
 
 const SIDEBAR_W = 240;
 const SIDEBAR_W_COLLAPSED = 64;
@@ -68,6 +69,8 @@ function AdminApp() {
           {currentView === 'export' && <ExportView onNavigate={setCurrentView} />}
           {currentView === 'calendar' && <CalendarView onNavigate={setCurrentView} />}
           {currentView === 'create' && <CreateEventView onNavigate={setCurrentView} />}
+          {currentView === 'settings' && <SettingsView onNavigate={setCurrentView} />}
+
         </main>
       </div>
     </div>

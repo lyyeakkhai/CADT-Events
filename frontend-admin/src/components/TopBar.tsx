@@ -10,17 +10,19 @@ interface TopBarProps {
 }
 
 const viewTitles: Record<ViewType, string> = {
-  dashboard: 'Event Management',
-  calendar: 'Event Calendar',
-  create: 'Create New Event',
-  export: 'Export Data',
+  dashboard: 'Management',
+  calendar: 'Calendar',
+  create: 'Create Event',
+  export: 'Data Export',
+  settings: 'Settings',
 };
 
 const viewBreadcrumb: Record<ViewType, string[]> = {
-  dashboard: ['Admin', 'Management'],
-  calendar: ['Admin', 'Calendar'],
-  create: ['Admin', 'Create Event'],
-  export: ['Admin', 'Export'],
+  dashboard: ['Dashboard', 'Overview'],
+  calendar: ['Dashboard', 'Calendar'],
+  create: ['Events', 'Create'],
+  export: ['Data', 'Export'],
+  settings: ['Dashboard', 'Settings'],
 };
 
 export default function TopBar({ currentView, searchQuery, setSearchQuery, setCurrentView, sidebarWidth }: TopBarProps) {
