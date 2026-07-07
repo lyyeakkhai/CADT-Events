@@ -101,7 +101,7 @@ export async function getMyBookings(req: Request, res: Response, next: NextFunct
 export async function cancelBooking(req: Request, res: Response, next: NextFunction) {
   try {
     const auth = getAuth(req);
-    const { id } = req.params;
+    const id = (req.params as any).id as string;
 
     const user = await prisma.user.findUnique({ where: { clerkId: auth.userId! } });
     if (!user) throw new NotFoundError('User not found');

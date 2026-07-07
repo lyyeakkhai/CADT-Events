@@ -1,8 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  
 }
 
 generator client {
@@ -10,298 +9,116 @@ generator client {
 }
 
 // =========================================================================
-// POSTGRESQL ENUM MAPS
+// ENUMS
 // =========================================================================
-enum UserRole {
-  student
-  staff
-  guest
 
-  @@map("user_role_enum")
-}
-
-enum AdminLevel {
-  super_admin
-  department_head
-  event_organizer
-
-  @@map("admin_level_enum")
-}
-
-enum AccountStatus {
-  active
-  inactive
-  suspended
-
-  @@map("account_status_enum")
+enum Role {
+  STUDENT
+  ADMIN
 }
 
 enum EventStatus {
-  draft
-  published
-  ongoing
-  completed
-  cancelled
-
-  @@map("event_status_enum")
+  DRAFT
+  PUBLISHED
+  ONGOING
+  COMPLETED
+  CANCELLED
 }
 
-enum EventType {
-  workshop
-  seminar
-  competition
-  conference
-  career_fair
-  networking
-  other
-
-  @@map("event_type_enum")
-}
-
-enum EventSeatStatus {
-  available
-  held
-  booked
-
-  @@map("event_seat_status_enum")
-}
-
-enum NotificationType {
-  announcement
-  registration
-  event_reminder
-  system
-  telegram
-
-  @@map("notification_type_enum")
-}
-
-enum TelegramStatus {
-  pending
-  sent
-  failed
-
-  @@map("telegram_status_enum")
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
 }
 
 // =========================================================================
-// SYSTEM MODELS
+// MODELS (aligned with current backend controllers & admin frontend)
 // =========================================================================
 
-// 1. admin
-model Admin {
-  admin_id      String     @id @db.VarChar(50)
-  full_name     String     @db.VarChar(100)
-  email         String     @unique @db.VarChar(100)
-  password_hash String     @db.VarChar(255)
-  admin_level   AdminLevel @default(event_organizer)
-  created_at    DateTime?  @default(now()) @db.Timestamp(6)
-  events        Event[]
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique @map("clerk_id")
+  email     String   @unique
+  name      String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("admin")
+  bookings Booking[]
+  events   Event[]   // Events created/administered by this user
+
+  @@map("users")
 }
 
-// 2. department
-model Department {
-  department_id     String            @id @db.VarChar(50)
-  department_name   String            @db.VarChar(100)
-  specialization    String?           @db.VarChar(100)
-  user_accounts     UserAccount[]
-  event_departments EventDepartment[]
-
-  @@map("department")
-}
-
-// 3. user_account
-model UserAccount {
-  user_id          String        @id @db.VarChar(50)
-  department_id    String?       @db.VarChar(50)
-  full_name        String        @db.VarChar(100)
-  email            String        @unique @db.VarChar(100)
-  password_hash    String        @db.VarChar(255)
-  role             UserRole
-  student_staff_id String?       @db.VarChar(50)
-  organization     String?       @db.VarChar(100)
-  avatar_url       String?       @db.VarChar(255)
-  telegram_chat_id String?       @unique @db.VarChar(50)
-  account_status   AccountStatus @default(active)
-  created_at       DateTime?     @default(now()) @db.Timestamp(6)
-
-  department    Department?    @relation(fields: [department_id], references: [department_id], onDelete: SetNull)
-  registrations Registration[]
-  favorites     Favorite[]
-  notifications Notification[]
-
-  @@map("user_account")
-}
-
-// 4. venue
 model Venue {
-  venue_id        String              @id @db.VarChar(50)
-  venue_name      String              @db.VarChar(100)
-  total_capacity  Int
-  events          Event[]
-  seat_templates  VenueSeatTemplate[]
+  id       String  @id @default(uuid())
+  name     String
+  address  String?
+  capacity Int?
+  events   Event[]
 
-  @@map("venue")
+  @@map("venues")
 }
 
-// 5. venue_seat_template
-model VenueSeatTemplate {
-  seat_template_id String      @id @db.VarChar(50)
-  venue_id         String      @db.VarChar(50)
-  seat_label       String      @db.VarChar(20)
-  seating_zone     String?     @db.VarChar(50)
-  
-  venue            Venue       @relation(fields: [venue_id], references: [venue_id], onDelete: Cascade)
-  event_seats      EventSeat[]
-
-  @@map("venue_seat_template")
-}
-
-// 6. event
 model Event {
-  event_id        String         @id @db.VarChar(50)
-  admin_id        String?        @db.VarChar(50)
-  venue_id        String?        @db.VarChar(50)
-  event_title     String         @db.VarChar(150)
-  description     String?        @db.Text
-  event_type      EventType
-  status          EventStatus    @default(draft)
-  start_time      DateTime       @db.Timestamp(6)
-  end_time        DateTime       @db.Timestamp(6)
-  cover_image_url String?        @db.VarChar(255)
-  badge           String?        @db.VarChar(50)
-  is_featured     Boolean?       @default(false)
-  created_at      DateTime?      @default(now()) @db.Timestamp(6)
+  id              String       @id @default(uuid())
+  title           String
+  description     String?      @db.Text
+  eventType       String?      @map("event_type")
+  status          EventStatus  @default(DRAFT)
+  startTimestamp  DateTime     @map("start_timestamp")
+  endTimestamp    DateTime     @map("end_timestamp")
+  location        String?
+  coverImageUrl   String?      @map("cover_image_url")
+  creditValue     Int          @default(0) @map("credit_value")
+  isFeatured      Boolean      @default(false) @map("is_featured")
+  capacity        Int?
+  adminId         String?      @map("admin_id")
+  deletedAt       DateTime?    @map("deleted_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  admin             Admin?            @relation(fields: [admin_id], references: [admin_id], onDelete: SetNull)
-  venue             Venue?            @relation(fields: [venue_id], references: [venue_id], onDelete: SetNull)
-  speakers          EventSpeaker[]
-  event_departments EventDepartment[]
-  event_seats       EventSeat[]
-  registrations     Registration[]
-  favorites         Favorite[]
-  notifications     Notification[]
+  admin    User?     @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  venue    Venue?    @relation(fields: [venueId], references: [id])
+  venueId  String?   @map("venue_id")
+  bookings Booking[]
 
-  @@index([start_time, end_time], map: "idx_event_dates")
-  @@map("event")
+  @@index([startTimestamp, endTimestamp])
+  @@map("events")
 }
 
-// 7. speaker
+model Booking {
+  id                 String        @id @default(uuid())
+  bookingReferenceId String        @unique @map("booking_reference_id")
+  userId             String        @map("user_id")
+  eventId            String        @map("event_id")
+  eventSeatId        String?       @map("event_seat_id")
+  status             BookingStatus @default(CONFIRMED)
+  qrCode             String?       @map("qr_code")
+  deletedAt          DateTime?     @map("deleted_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+// Legacy / future tables kept for compatibility (can be expanded in later phases)
 model Speaker {
-  speaker_id        String         @id @db.VarChar(50)
-  speaker_name      String         @db.VarChar(100)
-  title_role        String?        @db.VarChar(100)
-  organization      String?        @db.VarChar(100)
-  bio               String?        @db.Text
-  profile_image_url String?        @db.VarChar(255)
-  events            EventSpeaker[]
+  id              String @id @default(uuid())
+  name            String
+  titleRole       String?
+  organization    String?
+  bio             String? @db.Text
+  profileImageUrl String? @map("profile_image_url")
 
-  @@map("speaker")
+  @@map("speakers")
 }
 
-// 8. event_speaker (Bridge Table)
-model EventSpeaker {
-  event_id   String  @db.VarChar(50)
-  speaker_id String  @db.VarChar(50)
-  
-  event      Event   @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
-  speaker    Speaker @relation(fields: [speaker_id], references: [speaker_id], onDelete: Cascade)
+model Category {
+  id   String @id @default(uuid())
+  name String @unique
 
-  @@id([event_id, speaker_id])
-  @@map("event_speaker")
-}
-
-// 9. event_department (Bridge Table)
-model EventDepartment {
-  event_id      String     @db.VarChar(50)
-  department_id String     @db.VarChar(50)
-  
-  event         Event      @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
-  department    Department @relation(fields: [department_id], references: [department_id], onDelete: Cascade)
-
-  @@id([event_id, department_id])
-  @@map("event_department")
-}
-
-// 10. event_seat
-model EventSeat {
-  event_seat_id    String          @id @db.VarChar(50)
-  event_id         String          @db.VarChar(50)
-  seat_template_id String          @db.VarChar(50)
-  status           EventSeatStatus @default(available)
-  held_time        DateTime?       @db.Timestamp(6)
-  expired_time     DateTime?       @db.Timestamp(6)
-
-  event         Event             @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
-  seat_template VenueSeatTemplate @relation(fields: [seat_template_id], references: [seat_template_id], onDelete: Cascade)
-  registrations Registration[]
-
-  @@index([event_id, status], map: "idx_seat_state")
-  @@map("event_seat")
-}
-
-// 11. registration
-model Registration {
-  registration_id   String    @id @db.VarChar(50)
-  booking_reference String    @unique @db.VarChar(100)
-  qr_code           String?   @db.VarChar(255)
-  created_at        DateTime? @default(now()) @db.Timestamp(6)
-  user_id           String    @db.VarChar(50)
-  event_id          String    @db.VarChar(50)
-  event_seat_id     String?   @db.VarChar(50)
-
-  user       UserAccount @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  event      Event       @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
-  event_seat EventSeat?  @relation(fields: [event_seat_id], references: [event_seat_id], onDelete: SetNull)
-
-  @@map("registration")
-}
-
-// 12. favorite
-model Favorite {
-  favorite_id String    @id @db.VarChar(50)
-  user_id     String    @db.VarChar(50)
-  event_id    String    @db.VarChar(50)
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-
-  user  UserAccount @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  event Event       @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
-
-  @@unique([user_id, event_id], map: "unique_user_bookmark")
-  @@map("favorite")
-}
-
-// 13. notification
-model Notification {
-  notification_id String           @id @db.VarChar(50)
-  user_id         String           @db.VarChar(50)
-  event_id        String?          @db.VarChar(50)
-  title           String           @db.VarChar(150)
-  message         String           @db.Text
-  type            NotificationType
-  is_read         Boolean?         @default(false)
-  created_at      DateTime?        @default(now()) @db.Timestamp(6)
-
-  user                  UserAccount            @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  event                 Event?                 @relation(fields: [event_id], references: [event_id], onDelete: SetNull)
-  telegram_notifications TelegramNotification[]
-
-  @@index([user_id, is_read], map: "idx_user_inbox")
-  @@map("notification")
-}
-
-// 14. telegram_notification
-model TelegramNotification {
-  telegram_notification_id String         @id @db.VarChar(50)
-  notification_id          String         @db.VarChar(50)
-  message_text             String         @db.Text
-  status                   TelegramStatus @default(pending)
-  created_at               DateTime?      @default(now()) @db.Timestamp(6)
-
-  notification Notification @relation(fields: [notification_id], references: [notification_id], onDelete: Cascade)
-
-  @@index([status], map: "idx_telegram_bot_outbox")
-  @@map("telegram_notification")
+  @@map("categories")
 }
