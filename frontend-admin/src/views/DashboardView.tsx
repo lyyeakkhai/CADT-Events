@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import type { ViewType } from '../App';
 import { DownloadCloud, Plus, Filter, Users, Calendar, PieChart, Activity, MoreVertical, Edit2, Bell, Loader2 } from 'lucide-react';
@@ -15,7 +16,9 @@ interface DashboardEvent {
   capacity: number; // if not present, we will default to something
 }
 
-export default function DashboardView({ onNavigate, searchQuery = '' }: { onNavigate: (v: ViewType) => void, searchQuery?: string }) {
+export default function DashboardView({ searchQuery = '' }: { searchQuery?: string }) {
+  const _nav = useNavigate();
+  const onNavigate = (v: string) => _nav(v === 'dashboard' ? '/' : '/' + v);
   const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [loading, setLoading] = useState(true);
 

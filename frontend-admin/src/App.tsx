@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import DashboardView from './views/DashboardView';
@@ -11,16 +11,22 @@ import ExportView from './views/ExportView';
 import CalendarView from './views/CalendarView';
 import CreateEventView from './views/CreateEventView';
 import ProtectedRoute from './components/ProtectedRoute';
+import SettingsView from './views/SettingsView';
+import NotificationsView from './views/NotificationsView';
 
-export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create';
+export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create' | 'settings' | 'notifications';
 
 const SIDEBAR_W = 240;
 const SIDEBAR_W_COLLAPSED = 64;
 
 function AdminApp() {
-  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
+
+  const path = location.pathname.split('/')[1] || '';
+  const validPaths = ['export', 'calendar', 'create', 'settings', 'notifications'];
+  const currentView: ViewType = (validPaths.includes(path) ? path : 'dashboard') as ViewType;
 
   const sidebarWidth = isCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
 
@@ -28,7 +34,6 @@ function AdminApp() {
     <div className="admin-shell">
       <Sidebar
         currentView={currentView}
-        setCurrentView={setCurrentView}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
       />
@@ -38,7 +43,6 @@ function AdminApp() {
           currentView={currentView}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          setCurrentView={setCurrentView}
           sidebarWidth={sidebarWidth}
         />
 
@@ -64,10 +68,15 @@ function AdminApp() {
         </div>
 
         <main className="admin-main" style={{ paddingTop: 80 }}>
-          {currentView === 'dashboard' && <DashboardView onNavigate={setCurrentView} searchQuery={searchQuery} />}
-          {currentView === 'export' && <ExportView onNavigate={setCurrentView} />}
-          {currentView === 'calendar' && <CalendarView onNavigate={setCurrentView} />}
-          {currentView === 'create' && <CreateEventView onNavigate={setCurrentView} />}
+          <Routes>
+            <Route path="/" element={<DashboardView searchQuery={searchQuery} />} />
+            <Route path="/export" element={<ExportView />} />
+            <Route path="/calendar" element={<CalendarView />} />
+            <Route path="/create" element={<CreateEventView />} />
+            <Route path="/settings" element={<SettingsView />} />
+            <Route path="/notifications" element={<NotificationsView />} />
+            <Route path="*" element={<DashboardView searchQuery={searchQuery} />} />
+          </Routes>
         </main>
       </div>
     </div>
