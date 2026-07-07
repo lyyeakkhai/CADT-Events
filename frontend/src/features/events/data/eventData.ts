@@ -18,12 +18,13 @@ export interface AcademicEvent {
   description: string;
   isFeatured?: boolean;
   _apiId?: string;
+  seatsLeft?: number; // demo for home cards
 }
 
 export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
   {
     id: 1,
-    title: "Seminar Announcement: From Hide to Heal",
+    title: "From Hide to Heal",
     speaker: "Ms. Sotheary Yim",
     date: "Oct 24, 2024",
     time: "09:00 AM",
@@ -33,7 +34,8 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     badge: "Seminar",
     image: hidetoheal,
     isFeatured: true,
-    description: "A deep dive into zero-trust architectures and next-generation threat mitigation strategies."
+    description: "Exploring personal and organizational healing in the digital age through case studies and reflective practices.",
+    seatsLeft: 18
   },
   {
     id: 2,
@@ -47,7 +49,8 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     badge: "Conference",
     isFeatured: false,
     image: ict,
-    description: "Exploring the ethics and implementation of Large Language Models in institutional workflows."
+    description: "Exploring the ethics and implementation of Large Language Models in institutional workflows.",
+    seatsLeft: 45
   },
   {
     id: 3,
@@ -61,7 +64,8 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     badge: "Exhibition",
     image: drone,
      isFeatured: false,
-    description: "An interactive exhibition featuring the capstone projects of our Digital Media and UX Design students."
+    description: "An interactive exhibition featuring the capstone projects of our Digital Media and UX Design students.",
+    seatsLeft: 120
   },
   {
     id: 4,
@@ -75,7 +79,8 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     badge: "Networking",
     image: plugandplay,
     isFeatured: true,
-    description: "Connect with over 50 leading technology firms and startups for internship and career opportunities."
+    description: "Connect with over 50 leading technology firms and startups for internship and career opportunities.",
+    seatsLeft: 32
   },
   {
     id: 5,
@@ -89,7 +94,8 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     badge: "Hands-on",
     image: digitaltransform,
     isFeatured: true,
-    description: "Practical workshop on processing large-scale datasets using AWS and Google Cloud systems."
+    description: "Practical workshop on processing large-scale datasets using AWS and Google Cloud systems.",
+    seatsLeft: 12
   },
   {
     id: 6,
@@ -103,6 +109,7 @@ export const FIGMA_EVENTS_DATA: AcademicEvent[] = [
     badge: "Seminar",
     image:scholarship,
      isFeatured: false,
-    description: "A seminar for aspiring team leads and project managers on navigating shifting digital trends."
+    description: "Information session on fully-funded scholarship opportunities for CADT students at partner universities in China.",
+    seatsLeft: 25
   }
 ];

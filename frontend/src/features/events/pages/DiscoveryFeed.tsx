@@ -21,6 +21,7 @@ function toAcademicEvent(e: ApiEvent): AcademicEvent {
     image: e.coverImageUrl ?? '',
     description: e.description,
     isFeatured: e.isFeatured,
+    seatsLeft: 25, // demo default; backend integration can enhance
     // Keep original id for API calls
     _apiId: e.id,
   } as AcademicEvent & { _apiId: string };
@@ -38,19 +39,24 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [apiEvents, setApiEvents] = useState<AcademicEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch from backend; fall back to mock data if it fails
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(null);
     getEvents()
       .then((res) => {
         if (!cancelled) {
           setApiEvents(res.data.map(toAcademicEvent));
         }
       })
-      .catch(() => {
-        if (!cancelled) setApiEvents(null); // will fall back to FIGMA_EVENTS_DATA
+      .catch((e) => {
+        if (!cancelled) {
+          setError('Unable to load live events. Showing curated list.');
+          setApiEvents(null); // fall back to FIGMA_EVENTS_DATA
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -95,7 +101,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
   if (loading) {
     return (
       <div className="w-full flex flex-col bg-slate-50">
-        <div className="w-full h-[340px] md:h-[400px] bg-slate-900 animate-pulse" />
+        <div className="w-full h-[340px] md:h-[400px] bg-[#0b2c6a] animate-pulse" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
           <div className="flex items-center gap-2 text-slate-500 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -103,7 +109,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {[1,2,3,4,5,6].map(i => (
-              <div key={i} className="bg-white rounded-xl border border-slate-100 h-64 animate-pulse" />
+              <div key={i} className="bg-white rounded-2xl border border-slate-100 h-[320px] animate-pulse" />
             ))}
           </div>
         </div>
@@ -118,46 +124,49 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
           HERO CAROUSEL SLIDER BLOCK (Vector Layout Update)
          ======================================================================= */}
       {featuredEvents.length > 0 && (
-        <section className="relative w-full h-[340px] md:h-[400px] overflow-hidden bg-slate-950 flex items-center group border-b border-slate-800">
-          <div className="absolute inset-0 z-0 transition-all duration-500">
+        <section className="relative w-full h-[340px] md:h-[400px] overflow-hidden bg-[#0b2c6a] flex items-center group border-b border-[#0b2c6a]/80">
+          {/* Stronger, legible hero treatment (better contrast, institutional navy base) */}
+          <div className="absolute inset-0 z-0">
             <img 
               src={featuredEvents[currentSlide].image} 
               alt={featuredEvents[currentSlide].title} 
-              className="w-full h-full object-cover opacity-25 mix-blend-luminosity"
+              className="w-full h-full object-cover opacity-40"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0b2c6a] via-[#0b2c6a]/90 to-[#0b2c6a]/70" />
           </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 text-left space-y-3.5">
+          <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 text-left space-y-4">
             <div className="flex items-center gap-2 select-none">
-              <span className="bg-amber-400 text-slate-900 text-[10px] tracking-widest font-black uppercase px-2.5 py-0.5 rounded-md shadow-sm flex items-center gap-1">
-                <span className="w-3 h-3 text-slate-800 " /> SPECIAL EVENT
+              <span className="bg-amber-400 text-[#0b2c6a] text-[10px] tracking-[1px] font-bold uppercase px-3 py-0.5 rounded-md">
+                FEATURED
               </span>
-              <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] tracking-wider font-extrabold uppercase px-2.5 py-0.5 rounded-md">
+              <span className="text-white/70 text-[11px] tracking-wider font-medium border border-white/30 px-2.5 py-0.5 rounded">
                 {featuredEvents[currentSlide].badge}
               </span>
             </div>
 
             <h1 
               onClick={() => onSelectEvent && onSelectEvent(featuredEvents[currentSlide])}
-              className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight mb-3 max-w-3xl cursor-pointer hover:text-amber-400 transition-colors duration-150"
+              className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-[-0.015em] leading-[1.05] mb-2 max-w-4xl cursor-pointer hover:text-amber-300 transition-colors duration-150"
             >
               {featuredEvents[currentSlide].title}
             </h1>
             
-            <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-xl leading-relaxed mb-5 line-clamp-2">
+            <p className="text-white/85 text-[15px] sm:text-base font-medium max-w-2xl leading-relaxed mb-4 line-clamp-2">
               {featuredEvents[currentSlide].description}
             </p>
             
-            <div className="flex flex-wrap items-center text-slate-400 text-[11px] font-bold gap-x-4 gap-y-1 mb-6 select-none">
-              <span>👤 Host: <span className="text-slate-200">{featuredEvents[currentSlide].speaker}</span></span>
-              <span>🏢 Venue: <span className="text-slate-200">{featuredEvents[currentSlide].venue}</span></span>
-              <span>📅 Date: <span className="text-slate-200">{featuredEvents[currentSlide].date}</span></span>
+            <div className="flex flex-wrap items-center text-white/70 text-sm font-medium gap-x-5 gap-y-1 mb-5 select-none">
+              <span><span className="text-white/60">Host</span> {featuredEvents[currentSlide].speaker}</span>
+              <span className="hidden sm:inline text-white/40">·</span>
+              <span><span className="text-white/60">Venue</span> {featuredEvents[currentSlide].venue}</span>
+              <span className="hidden sm:inline text-white/40">·</span>
+              <span><span className="text-white/60">Date</span> {featuredEvents[currentSlide].date} · {featuredEvents[currentSlide].time}</span>
             </div>
             
             <button 
               onClick={() => onSelectEvent && onSelectEvent(featuredEvents[currentSlide])}
-              className="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-900 text-xs font-black rounded-lg shadow-md transition-all cursor-pointer"
+              className="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-[#0b2c6a] text-sm font-bold tracking-[0.3px] rounded-lg shadow transition-all active:scale-[0.985] cursor-pointer"
             >
               Register Now →
             </button>
@@ -200,66 +209,69 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
           
           <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-3 max-w-3xl">
             
-            {/* Contextual Input Field Wrapper with Vector Search Lens */}
+            {/* Search + Filters — refined sizes per design review */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search event title, speaker, keywords..."
-                className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 pl-9 pr-8 py-2 rounded-lg text-xs font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white focus:border-blue-500 transition-all"
+                placeholder="Search title, speaker or keywords..."
+                className="w-full bg-white border border-slate-200 hover:border-slate-300 pl-10 pr-8 py-2 rounded-lg text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0b2c6a]/30 focus:border-[#0b2c6a]/40 transition-all"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
 
-            {/* Department Filter */}
-            <select
-              value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-semibold px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all cursor-pointer min-w-[150px]"
-            >
-              <option value="All">Department: All</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Software Engineering">Software Engineering</option>
-              <option value="Telecommunication & Networking">Telecommunication & Networking</option>
-              <option value="Digital Business">Digital Business</option>
-            </select>
+            {/* Department pills — premium visual filter per DESIGN.md */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {['All', 'Computer Science', 'Software Engineering', 'Telecommunication & Networking', 'Digital Business'].map((dept) => {
+                const isActive = selectedDept === dept || (dept === 'All' && selectedDept === 'All');
+                return (
+                  <button
+                    key={dept}
+                    onClick={() => setSelectedDept(dept)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all border ${
+                      isActive 
+                        ? 'bg-[#0b2c6a] text-white border-[#0b2c6a]' 
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-800'
+                    }`}
+                  >
+                    {dept === 'All' ? 'All' : dept.replace('Telecommunication & Networking', 'Telecom')}
+                  </button>
+                );
+              })}
+            </div>
 
-            {/* Timeframe Filter */}
             <select
               value={selectedTimeframe}
               onChange={(e) => setSelectedTimeframe(e.target.value)}
-              className="bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-semibold px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all cursor-pointer min-w-[130px]"
+              className="bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-sm font-medium px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0b2c6a]/30 transition-all cursor-pointer"
             >
-              <option value="This Month">Date: This Month</option>
-              <option value="Next Month">Date: Next Month</option>
+              <option value="This Month">This month</option>
+              <option value="Next Month">Next month</option>
             </select>
           </div>
 
-          {/* Results Analytics Metadata */}
-          <div className="flex items-center justify-between lg:justify-end gap-4 text-xs font-bold text-slate-400 select-none border-t lg:border-t-0 pt-2 lg:pt-0 shrink-0">
-            <span className="flex items-center gap-1 text-slate-500">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" /> {filteredEvents.length} Events Found
-            </span>
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 text-sm font-medium text-slate-500 select-none border-t lg:border-t-0 pt-2 lg:pt-0 shrink-0">
             <button 
               onClick={handleClearAll}
-              className="text-blue-600 hover:text-blue-800 transition-colors cursor-pointer font-extrabold flex items-center gap-0.5"
+              className="text-[#0b2c6a] hover:text-[#082050] transition-colors cursor-pointer font-semibold flex items-center gap-1 text-sm"
             >
-              <RotateCcw className="w-3 h-3" /> Clear All
+              <RotateCcw className="w-3.5 h-3.5" /> Clear
             </button>
             <button
               onClick={onViewCalendarClick}
-              className="ml-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-md text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+              className="ml-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
             >
-              <Calendar className="w-3.5 h-3.5 text-slate-500" /> Calendar View
+              <Calendar className="w-3.5 h-3.5" /> Calendar
             </button>
           </div>
         </div>
@@ -269,21 +281,36 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
           MAIN RENDER GRID LAYER
          ======================================================================= */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow">
+        {error && (
+          <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800">
+            {error} Showing curated highlights.
+          </div>
+        )}
+
+        {/* Clear section header for IA per design review */}
+        <div className="mb-6 flex items-baseline justify-between">
+          <div>
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Upcoming at CADT</h2>
+            <p className="text-sm text-slate-500 mt-0.5">Academic events, workshops &amp; seminars for our community</p>
+          </div>
+          <div className="hidden md:block text-xs font-medium text-slate-400">{filteredEvents.length} results</div>
+        </div>
+
         {filteredEvents.length === 0 ? (
-          /* High-Fidelity UX Error Empty State View (Vector Update) */
-          <div className="w-full text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300 px-4 flex flex-col items-center justify-center animate-fade-in max-w-md mx-auto shadow-sm">
-            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center mb-3">
-              <Search className="w-6 h-6 text-slate-400" />
+          /* Improved empty state — warm + actionable (per DESIGN.md) */
+          <div className="w-full text-center py-16 bg-white rounded-2xl border border-slate-200 px-6 flex flex-col items-center justify-center animate-fade-in max-w-md mx-auto">
+            <div className="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <Search className="w-5 h-5 text-slate-400" />
             </div>
-            <p className="text-sm font-extrabold text-slate-800 mb-1">No match criteria found</p>
-            <p className="text-xs font-medium text-slate-400 max-w-xs leading-relaxed">
-              We couldn't find anything matching your exact query string. Check your parameters or clear the query to start fresh!
+            <p className="text-base font-semibold text-slate-800 mb-1">No events match your filters</p>
+            <p className="text-sm text-slate-500 max-w-[26ch] leading-relaxed">
+              Try adjusting your search or clearing filters to see more upcoming CADT academic events.
             </p>
             <button
               onClick={handleClearAll}
-              className="mt-4 px-4 py-2 bg-slate-950 hover:bg-blue-900 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-sm flex items-center gap-1"
+              className="mt-5 px-5 py-2 bg-[#0b2c6a] hover:bg-[#082050] text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
             >
-              <RotateCcw className="w-3 h-3" /> Reset All Filters
+              <RotateCcw className="w-3.5 h-3.5" /> Clear filters
             </button>
           </div>
         ) : (
@@ -298,13 +325,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
           </div>
         )}
 
-        {filteredEvents.length > 0 && (
-          <div className="w-full flex justify-center items-center mt-12">
-            <button className="px-6 py-2.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 text-xs font-bold rounded-xl shadow-xs transition-all active:scale-[0.98] cursor-pointer">
-              Load More Events
-            </button>
-          </div>
-        )}
+        {/* Load more removed — non-functional in current demo. Use Calendar tab or clear filters for exploration. */}
       </main>
 
     </div>

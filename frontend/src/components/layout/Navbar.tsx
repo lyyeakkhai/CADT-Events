@@ -29,7 +29,7 @@ export default function Navbar({
   };
 
   return (
-    <header className="w-full bg-slate-900 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md bg-slate-900/95 shadow-md">
+    <header className="w-full bg-[#0a2540] border-b border-[#0b2c6a]/60 sticky top-0 z-50 backdrop-blur-md shadow-md">
       <div className="w-full px-4 sm:px-8 lg:px-12 h-16 flex items-center">
         
         {/* =======================================================================
@@ -45,7 +45,7 @@ export default function Navbar({
               <img src={Logo} alt="CADT Event Logo" className="w-full h-full object-contain" />
             </div>
 
-            <span className="text-[15px] font-black text-white tracking-tight group-hover:text-amber-400 transition-colors duration-150">
+            <span className="text-[15px] font-black text-white tracking-tight group-hover:text-[#f59e0b] transition-colors duration-150">
               CADT Event
             </span>
           </div>
@@ -81,24 +81,24 @@ export default function Navbar({
            ======================================================================= */}
         <div className="flex-1 flex items-center justify-end gap-3 sm:gap-5">
           
-          {/* Search Bar */}
-          <div className="hidden md:flex items-center relative group">
-            <svg className="absolute left-3 w-4 h-4 text-slate-400 group-focus-within:text-amber-400 transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (activeTab !== 'Discover') {
+          {/* Search Bar — hidden on Discover (use the main filter bar search per DESIGN.md) */}
+          {activeTab !== 'Discover' && (
+            <div className="hidden md:flex items-center relative group">
+              <svg className="absolute left-3 w-4 h-4 text-slate-400 group-focus-within:text-[#f59e0b] transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
                   setActiveTab('Discover');
-                }
-              }}
-              placeholder="Search events..." 
-              className="bg-slate-800/60 border border-slate-700/50 text-[13px] rounded-full pl-9 pr-4 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-400/50 focus:border-amber-400/50 focus:bg-slate-800 transition-all w-48 lg:w-64 shadow-inner"
-            />
-          </div>
+                }}
+                placeholder="Search events..." 
+                className="bg-[#0f172a]/60 border border-white/10 text-[13px] rounded-full pl-9 pr-4 py-1.5 text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-[#f59e0b]/60 focus:border-[#f59e0b]/50 focus:bg-[#0a2540] transition-all w-48 lg:w-64 shadow-inner"
+              />
+            </div>
+          )}
 
           {/* Notifications Icon Trigger */}
           <button 
@@ -109,7 +109,7 @@ export default function Navbar({
             <svg className="w-[21px] h-[21px]" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
             </svg>
-            <span className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full ring-2 ring-slate-900" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-[#f59e0b] rounded-full ring-2 ring-[#0a2540]" />
           </button>
 
           {/* Saved Favorites Trigger */}
@@ -150,7 +150,7 @@ export default function Navbar({
 
       {/* Mobile Drawer Dropdown Panel Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-slate-900 border-b border-slate-800 absolute top-16 left-0 right-0 shadow-xl z-40 animate-fade-in">
+        <div className="md:hidden bg-[#0a2540] border-b border-[#0b2c6a]/40 absolute top-16 left-0 right-0 shadow-xl z-40 animate-fade-in">
           <nav className="flex flex-col p-4 space-y-1">
             {navItems.map((item) => {
               const isActive = activeTab === item;
@@ -160,8 +160,8 @@ export default function Navbar({
                   onClick={() => handleTabSelect(item)}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                     isActive 
-                      ? 'bg-white text-slate-950 shadow-md' 
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-white text-[#0a2540] shadow-md' 
+                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   {item}

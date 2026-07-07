@@ -13,6 +13,7 @@ import SeatSelection from './features/events/pages/SeatSelection';
 import BookingConfirmed from './features/events/pages/BookingConfirmed';
 import MyBooking from './features/events/pages/MyBooking';
 import About from './features/events/pages/About';
+import CalendarView from './features/calendar/CalendarView';
 
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -198,18 +199,15 @@ function AuthenticatedApp() {
         onProfileClick={() => {}}
       />
 
-      {/* Session ribbon */}
-      <div className="w-full bg-[#0f172a] text-white px-4 sm:px-8 py-1.5 text-[11px] font-bold flex justify-between items-center border-b border-slate-800 shadow-inner select-none">
+      {/* Subtle institutional context (de-emphasized per design review) */}
+      <div className="w-full bg-[#0b2c6a]/5 text-[#0b2c6a] px-4 sm:px-8 py-1 text-[10px] font-medium flex justify-between items-center border-b border-[#0b2c6a]/10 select-none">
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-1 h-1 rounded-full bg-[#0b2c6a] opacity-60" />
           <span>
-            Active Workspace:{' '}
-            <span className="text-amber-400 uppercase tracking-wider">
-              {isAdmin ? 'Admin Control Node' : 'CADT Student Session'}
-            </span>
+            CADT Events — {isAdmin ? 'Admin' : 'Student Portal'}
           </span>
         </div>
-        <span className="text-slate-500 text-[10px]">
+        <span className="text-[#0b2c6a]/60 text-[10px] truncate max-w-[220px]">
           {user?.primaryEmailAddress?.emailAddress}
         </span>
       </div>
@@ -243,6 +241,11 @@ function AuthenticatedApp() {
           <MyBooking />
         ) : activeTab === 'About' ? (
           <About onExploreEventsClick={() => setActiveTab('Discover')} />
+        ) : activeTab === 'Calendar' ? (
+          <CalendarView 
+            onSelectEvent={(event) => setSelectedEvent(event)}
+            onGoHome={() => setActiveTab('Discover')}
+          />
         ) : (
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center flex-grow flex flex-col items-center justify-center">
             <span className="text-3xl block mb-2">🛠️</span>

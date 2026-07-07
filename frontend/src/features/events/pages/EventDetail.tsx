@@ -232,7 +232,7 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
             <div className="space-y-2 pt-1">
               <button 
                 onClick={() => onRegisterClick(event)}
-                className="w-full bg-slate-950 hover:bg-blue-900 text-white font-extrabold text-xs py-3 rounded-xl shadow-sm hover:shadow transition-all duration-150 cursor-pointer active:scale-[0.98]"
+                className="w-full bg-[#0b2c6a] hover:bg-[#082050] text-white font-bold text-sm py-3 rounded-xl shadow-sm transition-all duration-150 cursor-pointer active:scale-[0.985]"
               >
                 REGISTER NOW
               </button>

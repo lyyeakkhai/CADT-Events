@@ -8,53 +8,57 @@ interface EventCardProps {
 
 export default function EventCard({ event, onSelect }: EventCardProps) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/60 overflow-hidden shadow-xs hover:shadow-md hover:border-slate-300/80 transition-all duration-200 flex flex-col justify-between">
+    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between group">
       <div>
-        {/* Card Header Image Frame */}
-        <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+        {/* Card Image — cleaner treatment */}
+        <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
           <img 
             src={event.image} 
             alt={event.title} 
-            className="w-full h-full object-cover" 
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" 
           />
-          {/* Badge Flag */}
-          <span className="absolute top-3 left-3 bg-slate-950 text-white text-[10px] font-black px-2.5 py-1 rounded-md tracking-wider uppercase shadow-sm">
+          <span className="absolute top-3 left-3 bg-white/95 text-[#0b2c6a] text-[10px] font-semibold tracking-[0.5px] px-2.5 py-0.5 rounded border border-white/60 shadow-sm">
             {event.badge}
           </span>
         </div>
 
-        {/* Content Specifications */}
+        {/* Content — improved hierarchy + breathing room (per DESIGN.md) */}
         <div className="p-5">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-600 uppercase tracking-wide mb-1.5">
-            <span>📅 {event.date}</span>
-            <span>&bull;</span>
-            <span>{event.time}</span>
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 mb-2">
+            <span>{event.date}</span>
+            <span className="text-slate-300">·</span>
+            <span className="text-slate-600">{event.time}</span>
           </div>
           
-          <h3 className="text-base font-extrabold text-slate-900 leading-snug tracking-tight mb-2 line-clamp-2 hover:text-blue-900 cursor-pointer">
+          <h3 className="text-[17px] font-extrabold text-slate-900 leading-snug tracking-[-0.01em] mb-2.5 line-clamp-2 group-hover:text-[#0b2c6a] cursor-pointer transition-colors">
             {event.title}
           </h3>
           
-          <p className="text-xs text-slate-500 line-clamp-2 mb-3 leading-relaxed">
+          <p className="text-[14px] text-slate-600 line-clamp-2 mb-3.5 leading-relaxed">
             {event.description}
           </p>
           
-          <p className="text-[11px] font-semibold text-slate-400">
-            Host Speaker: <span className="text-slate-600">{event.speaker}</span>
+          <p className="text-sm text-slate-500">
+            <span className="text-slate-400">Host</span> {event.speaker}
           </p>
         </div>
       </div>
 
       {/* Action Tray */}
-      <div className="px-5 pb-5 pt-0 border-t border-slate-100/60 flex items-center justify-between gap-3 mt-2">
-        <span className="text-[11px] font-bold text-slate-400 truncate max-w-[130px]">
-          📍 {event.venue}
-        </span>
+      <div className="px-5 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-medium text-slate-500 truncate max-w-[110px]">📍 {event.venue}</span>
+          {event.seatsLeft !== undefined && (
+            <span className="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-100">
+              {event.seatsLeft} left
+            </span>
+          )}
+        </div>
         <button
           onClick={() => onSelect(event)}
-          className="px-4 py-2 bg-slate-950 hover:bg-blue-900 text-white text-xs font-extrabold rounded-lg shadow-sm transition-all active:scale-[0.97]"
+          className="px-4 py-1.5 bg-[#0b2c6a] hover:bg-[#082050] text-white text-xs font-bold rounded-lg transition-all active:scale-[0.985]"
         >
-          View Detail
+          View Details
         </button>
       </div>
     </div>
