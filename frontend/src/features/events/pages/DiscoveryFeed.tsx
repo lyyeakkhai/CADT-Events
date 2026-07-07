@@ -237,7 +237,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
                   <button
                     key={dept}
                     onClick={() => setSelectedDept(dept)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all border ${
+                    className={`px-3 py-1.5 min-h-[36px] rounded-full text-xs font-semibold transition-all border ${
                       isActive 
                         ? 'bg-[#0b2c6a] text-white border-[#0b2c6a]' 
                         : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-800'
