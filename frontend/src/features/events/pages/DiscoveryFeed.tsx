@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Calendar, RotateCcw, X, SlidersHorizontal, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import EventCard from '../../../components/EventCard';
-import { FIGMA_EVENTS_DATA } from '../data/eventData';
-import type { AcademicEvent } from '../data/eventData';
+import { FIGMA_EVENTS_DATA } from '../../../features/events/data/eventData';
+import type { AcademicEvent } from '../../../features/events/data/eventData';
 import { getEvents, type ApiEvent } from '../../../services/api';
 import { useUrlSearch } from '../../../hooks/useUrlSearch';
 

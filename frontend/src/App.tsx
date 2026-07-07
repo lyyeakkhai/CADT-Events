@@ -7,12 +7,12 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Logo from './assets/images/CADT Event Logo (1).png';
 
-import DiscoveryFeed from './features/events/pages/DiscoveryFeed';
-import EventDetails from './features/events/pages/EventDetail';
-import SeatSelection from './features/events/pages/SeatSelection';
-import BookingConfirmed from './features/events/pages/BookingConfirmed';
-import MyBooking from './features/events/pages/MyBooking';
-import About from './features/events/pages/About';
+import DiscoveryFeed from '../src/Features/events/pages/DiscoveryFeed.tsx';
+import EventDetails from '../src/Features/events/pages/EventDetail.tsx';
+import SeatSelection from '../src/Features/events/pages/SeatSelection.tsx';
+import BookingConfirmed from '../src/Features/events/pages/BookingConfirmed.tsx';
+import MyBooking from '../src/Features/events/pages/MyBooking.tsx';
+import About from '../src/Features/events/pages/About.tsx';
 
 import ProtectedRoute from './components/ProtectedRoute';
 

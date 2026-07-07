@@ -1,527 +1,307 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// CADT Events — Prisma Schema
-// Aligned with: docs/SYSTEM_DESIGN_SPEC.md  (Section 4 — Optimized SQL Schema)
-// Last updated: 2026-07-04
-//
-// GAP FIXES in this version:
-//   + Department.description, logoUrl
-//   + Venue.address, buildingFloor
-//   + Category.iconUrl, color
-//   + User.isBlocked (blocked ≠ deleted)
-//   + Event.maxRegistrationsPerUser
-//   + EventAgendaItem  (new model — event timetable)
-//   + TelegramLinkToken (new model — one-time link token)
-//   + Notification.type, referenceId  (typed + linkable)
-//   + CreditTransaction  (new model — full credit audit log)
-// ─────────────────────────────────────────────────────────────────────────────
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  
+}
 
 generator client {
   provider = "prisma-client-js"
-  engineType = "library"
 }
 
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+// =========================================================================
+// POSTGRESQL ENUM MAPS
+// =========================================================================
+enum UserRole {
+  student
+  staff
+  guest
+
+  @@map("user_role_enum")
 }
 
-// ─────────────────────────────────────────────
-// ENUMS
-// ─────────────────────────────────────────────
+enum AdminLevel {
+  super_admin
+  department_head
+  event_organizer
 
-/// System-level roles controlling dashboard and API access.
-/// STUDENT    — read-only, can book events
-/// STAFF      — internal university staff, can create events for own department
-/// ORGANIZER  — can create / manage events, cannot manage users
-/// ADMIN      — full CRUD, user management, analytics export
-/// SUPER_ADMIN — database-level grants, can promote other users
-enum Role {
-  STUDENT
-  STAFF
-  ORGANIZER
-  ADMIN
-  SUPER_ADMIN
+  @@map("admin_level_enum")
+}
+
+enum AccountStatus {
+  active
+  inactive
+  suspended
+
+  @@map("account_status_enum")
 }
 
 enum EventStatus {
-  DRAFT      // not visible to public
-  PUBLISHED  // live on homepage
-  CANCELLED  // hidden, attendees notified
-  COMPLETED  // past event, credits awarded
+  draft
+  published
+  ongoing
+  completed
+  cancelled
+
+  @@map("event_status_enum")
 }
 
-enum BookingStatus {
-  CONFIRMED
-  CANCELLED
-  ATTENDED // set after check-in scan
+enum EventType {
+  workshop
+  seminar
+  competition
+  conference
+  career_fair
+  networking
+  other
+
+  @@map("event_type_enum")
 }
 
-enum SeatStatus {
-  AVAILABLE
-  HELD     // reserved via SeatHold for 10 min
-  OCCUPIED // confirmed Booking exists
+enum EventSeatStatus {
+  available
+  held
+  booked
+
+  @@map("event_seat_status_enum")
 }
 
-/// FIX #4 — typed notifications so the frontend can route correctly
 enum NotificationType {
-  EVENT_REMINDER // 24h / 30m before event
-  SEAT_ALERT     // < 20% seats left on favorited event
-  EVENT_UPDATE   // schedule or location changed
-  NEW_EVENT      // new event in a favorited category
-  CHECK_IN       // confirmation after QR scan
-  SYSTEM         // platform-wide broadcast
+  announcement
+  registration
+  event_reminder
+  system
+  telegram
+
+  @@map("notification_type_enum")
 }
 
-/// FIX #9 — credit audit log entry type
-enum CreditTxType {
-  EARNED    // attendance check-in
-  BONUS     // admin manual award
-  DEDUCTED  // admin correction / penalty
-  EXPIRED   // (future) unused seasonal credits
+enum TelegramStatus {
+  pending
+  sent
+  failed
+
+  @@map("telegram_status_enum")
 }
 
-// ─────────────────────────────────────────────
-// DEPARTMENT
-// ─────────────────────────────────────────────
+// =========================================================================
+// SYSTEM MODELS
+// =========================================================================
 
-/// Academic / administrative unit within CADT.
+// 1. admin
+model Admin {
+  admin_id      String     @id @db.VarChar(50)
+  full_name     String     @db.VarChar(100)
+  email         String     @unique @db.VarChar(100)
+  password_hash String     @db.VarChar(255)
+  admin_level   AdminLevel @default(event_organizer)
+  created_at    DateTime?  @default(now()) @db.Timestamp(6)
+  events        Event[]
+
+  @@map("admin")
+}
+
+// 2. department
 model Department {
-  id          String  @id @default(uuid())
-  name        String
-  code        String  @unique // e.g. "CS", "IT", "EE"
-  // FIX #8 — department profile page
-  description String?
-  logoUrl     String? @map("logo_url")
+  department_id     String            @id @db.VarChar(50)
+  department_name   String            @db.VarChar(100)
+  specialization    String?           @db.VarChar(100)
+  user_accounts     UserAccount[]
+  event_departments EventDepartment[]
 
-  users  User[]
-  events Event[]
-
-  @@map("departments")
+  @@map("department")
 }
 
-// ─────────────────────────────────────────────
-// USERS
-// ─────────────────────────────────────────────
+// 3. user_account
+model UserAccount {
+  user_id          String        @id @db.VarChar(50)
+  department_id    String?       @db.VarChar(50)
+  full_name        String        @db.VarChar(100)
+  email            String        @unique @db.VarChar(100)
+  password_hash    String        @db.VarChar(255)
+  role             UserRole
+  student_staff_id String?       @db.VarChar(50)
+  organization     String?       @db.VarChar(100)
+  avatar_url       String?       @db.VarChar(255)
+  telegram_chat_id String?       @unique @db.VarChar(50)
+  account_status   AccountStatus @default(active)
+  created_at       DateTime?     @default(now()) @db.Timestamp(6)
 
-/// All platform users — students, staff, organizers, admins.
-model User {
-  id             String    @id @default(uuid())
-  clerkId        String?   @unique @map("clerk_id")
-  email          String    @unique
-  passwordHash   String?   @map("password_hash")
-  name           String
-  studentStaffId String?   @unique @map("student_staff_id") // official CADT ID
-  organization   String? // for external participants
-  avatarUrl      String?   @map("avatar_url")
-  role           Role      @default(STUDENT)
-  departmentId   String?   @map("department_id")
+  department    Department?    @relation(fields: [department_id], references: [department_id], onDelete: SetNull)
+  registrations Registration[]
+  favorites     Favorite[]
+  notifications Notification[]
 
-  // Credits system (Spec §3.1 — point 2)
-  totalCredits Int @default(0) @map("total_credits")
-
-  // FIX #3 — blocked ≠ deleted. Blocked users cannot book but records are preserved.
-  isBlocked Boolean   @default(false) @map("is_blocked")
-  blockedAt DateTime? @map("blocked_at") // when it was blocked
-  blockedBy String?   @map("blocked_by") // user_id of admin who blocked
-
-  // Soft delete (Spec §3.1 — point 5)
-  deletedAt DateTime? @map("deleted_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  department         Department?            @relation(fields: [departmentId], references: [id])
-  bookings           Booking[]
-  favorites          Favorite[]
-  seatHolds          SeatHold[]
-  notificationPref   NotificationPreference?
-  telegramLink       TelegramLink?
-  telegramLinkTokens TelegramLinkToken[]
-  notifications      Notification[]
-  creditTransactions CreditTransaction[]
-  eventsCreated      Event[]                @relation("EventAdmin")
-
-  @@index([email])
-  @@index([role])
-  @@index([isBlocked])
-  @@index([deletedAt])
-  @@map("users")
+  @@map("user_account")
 }
 
-// ─────────────────────────────────────────────
-// SPEAKER
-// ─────────────────────────────────────────────
-
-/// External or internal speakers who present at events.
-model Speaker {
-  id              String  @id @default(uuid())
-  name            String
-  titleRole       String? @map("title_role") // e.g. "CTO at Acme Corp"
-  organization    String?
-  bio             String? @db.Text
-  profileImageUrl String? @map("profile_image_url")
-
-  events      EventSpeaker[]
-  agendaItems EventAgendaItem[] // back-ref for agenda slot speaker
-
-  @@map("speakers")
-}
-
-// ─────────────────────────────────────────────
-// VENUE
-// ─────────────────────────────────────────────
-
-/// Physical locations where events are held.
+// 4. venue
 model Venue {
-  id            String @id @default(uuid())
-  name          String
-  totalCapacity Int    @map("total_capacity")
-  // FIX #6 — venue has no address / location info
-  address       String? // e.g. "Russian Blvd, Phnom Penh"
-  buildingFloor String? @map("building_floor") // e.g. "Block A, 3rd Floor"
+  venue_id        String              @id @db.VarChar(50)
+  venue_name      String              @db.VarChar(100)
+  total_capacity  Int
+  events          Event[]
+  seat_templates  VenueSeatTemplate[]
 
-  seats  VenueSeat[]
-  events Event[]
-
-  @@map("venues")
+  @@map("venue")
 }
 
-/// Individual seat positions within a venue.
-model VenueSeat {
-  id          String  @id @default(uuid())
-  venueId     String  @map("venue_id")
-  seatLabel   String  @map("seat_label") // e.g. "A1", "B12"
-  seatingZone String? @map("seating_zone") // e.g. "VIP", "General"
+// 5. venue_seat_template
+model VenueSeatTemplate {
+  seat_template_id String      @id @db.VarChar(50)
+  venue_id         String      @db.VarChar(50)
+  seat_label       String      @db.VarChar(20)
+  seating_zone     String?     @db.VarChar(50)
+  
+  venue            Venue       @relation(fields: [venue_id], references: [venue_id], onDelete: Cascade)
+  event_seats      EventSeat[]
 
-  venue      Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  eventSeats EventSeat[]
-
-  @@unique([venueId, seatLabel])
-  @@map("venue_seats")
+  @@map("venue_seat_template")
 }
 
-// ─────────────────────────────────────────────
-// EVENT
-// ─────────────────────────────────────────────
-
-/// Core event entity — seminar, workshop, competition, etc.
+// 6. event
 model Event {
-  id            String      @id @default(uuid())
-  title         String
-  description   String      @db.Text
-  coverImageUrl String?     @map("cover_image_url")
-  venueId       String?     @map("venue_id")
-  departmentId  String?     @map("department_id")
-  eventType     String?     @map("event_type") // e.g. "seminar", "workshop"
-  status        EventStatus @default(DRAFT)
-  startTimestamp DateTime   @map("start_timestamp")
-  endTimestamp  DateTime    @map("end_timestamp")
-  badgeText     String?     @map("badge_text") // e.g. "New", "Hot"
-  isFeatured    Boolean     @default(false) @map("is_featured")
+  event_id        String         @id @db.VarChar(50)
+  admin_id        String?        @db.VarChar(50)
+  venue_id        String?        @db.VarChar(50)
+  event_title     String         @db.VarChar(150)
+  description     String?        @db.Text
+  event_type      EventType
+  status          EventStatus    @default(draft)
+  start_time      DateTime       @db.Timestamp(6)
+  end_time        DateTime       @db.Timestamp(6)
+  cover_image_url String?        @db.VarChar(255)
+  badge           String?        @db.VarChar(50)
+  is_featured     Boolean?       @default(false)
+  created_at      DateTime?      @default(now()) @db.Timestamp(6)
 
-  // Credits (Spec §3.1 — point 2)
-  creditValue Int @default(0) @map("credit_value")
+  admin             Admin?            @relation(fields: [admin_id], references: [admin_id], onDelete: SetNull)
+  venue             Venue?            @relation(fields: [venue_id], references: [venue_id], onDelete: SetNull)
+  speakers          EventSpeaker[]
+  event_departments EventDepartment[]
+  event_seats       EventSeat[]
+  registrations     Registration[]
+  favorites         Favorite[]
+  notifications     Notification[]
 
-  // FIX #5 — make max bookings per user explicit (default 1)
-  maxRegistrationsPerUser Int @default(1) @map("max_registrations_per_user")
-
-  // Soft delete
-  deletedAt DateTime? @map("deleted_at")
-
-  // Who created/owns this event
-  adminId String? @map("admin_id")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  venue        Venue?          @relation(fields: [venueId], references: [id])
-  department   Department?     @relation(fields: [departmentId], references: [id])
-  admin        User?           @relation("EventAdmin", fields: [adminId], references: [id])
-  categories   EventCategory[]
-  speakers     EventSpeaker[]
-  agendaItems  EventAgendaItem[]  // FIX #1
-  seats        EventSeat[]
-  bookings     Booking[]
-  favorites    Favorite[]
-
-  @@index([startTimestamp])
-  @@index([isFeatured])
-  @@index([status])
-  @@index([departmentId])
-  @@index([deletedAt])
-  @@map("events")
+  @@index([start_time, end_time], map: "idx_event_dates")
+  @@map("event")
 }
 
-// ─────────────────────────────────────────────
-// FIX #1 — EVENT AGENDA ITEMS
-// Spec §2.1.3 mentions "agenda" on the Event Detail Page.
-// Each row = one timetable slot (e.g. "09:00 — Opening Keynote").
-// ─────────────────────────────────────────────
+// 7. speaker
+model Speaker {
+  speaker_id        String         @id @db.VarChar(50)
+  speaker_name      String         @db.VarChar(100)
+  title_role        String?        @db.VarChar(100)
+  organization      String?        @db.VarChar(100)
+  bio               String?        @db.Text
+  profile_image_url String?        @db.VarChar(255)
+  events            EventSpeaker[]
 
-/// A single timetable slot within an event's agenda.
-model EventAgendaItem {
-  id          String   @id @default(uuid())
-  eventId     String   @map("event_id")
-  startTime   DateTime @map("start_time") // absolute timestamp
-  endTime     DateTime @map("end_time")
-  title       String // e.g. "Opening Keynote"
-  description String?  @db.Text
-  speakerId   String?  @map("speaker_id") // optional: links to Speaker
-  sortOrder   Int      @default(0) @map("sort_order") // display ordering
-
-  event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  speaker Speaker? @relation(fields: [speakerId], references: [id])
-
-  @@index([eventId, sortOrder])
-  @@map("event_agenda_items")
+  @@map("speaker")
 }
 
-// ─────────────────────────────────────────────
-// PIVOT TABLES (Many-to-Many)
-// ─────────────────────────────────────────────
-
-/// M:N — An event can have multiple speakers; a speaker can appear at many events.
+// 8. event_speaker (Bridge Table)
 model EventSpeaker {
-  eventId   String @map("event_id")
-  speakerId String @map("speaker_id")
+  event_id   String  @db.VarChar(50)
+  speaker_id String  @db.VarChar(50)
+  
+  event      Event   @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  speaker    Speaker @relation(fields: [speaker_id], references: [speaker_id], onDelete: Cascade)
 
-  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  speaker Speaker @relation(fields: [speakerId], references: [id], onDelete: Cascade)
-
-  @@id([eventId, speakerId])
-  @@map("event_speakers")
+  @@id([event_id, speaker_id])
+  @@map("event_speaker")
 }
 
-/// M:N — An event can belong to multiple categories.
-model EventCategory {
-  eventId    String @map("event_id")
-  categoryId String @map("category_id")
+// 9. event_department (Bridge Table)
+model EventDepartment {
+  event_id      String     @db.VarChar(50)
+  department_id String     @db.VarChar(50)
+  
+  event         Event      @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  department    Department @relation(fields: [department_id], references: [department_id], onDelete: Cascade)
 
-  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@id([eventId, categoryId])
-  @@map("event_categories")
+  @@id([event_id, department_id])
+  @@map("event_department")
 }
 
-// ─────────────────────────────────────────────
-// CATEGORY
-// ─────────────────────────────────────────────
-
-model Category {
-  id          String  @id @default(uuid())
-  name        String  @unique
-  description String?
-  // FIX #7 — frontend filter UI needs visual metadata
-  iconUrl     String? @map("icon_url") // e.g. SVG icon CDN link
-  color       String? // e.g. "#6366F1" for Tailwind indigo
-
-  events EventCategory[]
-
-  @@map("categories")
-}
-
-// ─────────────────────────────────────────────
-// SEAT MANAGEMENT
-// ─────────────────────────────────────────────
-
-/// Event-specific seat instance derived from a VenueSeat.
+// 10. event_seat
 model EventSeat {
-  id          String     @id @default(uuid())
-  eventId     String     @map("event_id")
-  venueSeatId String     @map("venue_seat_id")
-  status      SeatStatus @default(AVAILABLE)
+  event_seat_id    String          @id @db.VarChar(50)
+  event_id         String          @db.VarChar(50)
+  seat_template_id String          @db.VarChar(50)
+  status           EventSeatStatus @default(available)
+  held_time        DateTime?       @db.Timestamp(6)
+  expired_time     DateTime?       @db.Timestamp(6)
 
-  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  venueSeat VenueSeat @relation(fields: [venueSeatId], references: [id])
-  hold      SeatHold?
-  booking   Booking?
+  event         Event             @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  seat_template VenueSeatTemplate @relation(fields: [seat_template_id], references: [seat_template_id], onDelete: Cascade)
+  registrations Registration[]
 
-  @@unique([eventId, venueSeatId])
-  @@index([eventId, status])
-  @@map("event_seats")
+  @@index([event_id, status], map: "idx_seat_state")
+  @@map("event_seat")
 }
 
-/// Concurrency lock — prevents double booking during seat selection window.
-/// Expires after 10 minutes if booking is not completed (Spec §3.1 — point 4).
-model SeatHold {
-  id          String   @id @default(uuid())
-  eventSeatId String   @unique @map("event_seat_id")
-  userId      String   @map("user_id")
-  heldAt      DateTime @default(now()) @map("held_at")
-  expiresAt   DateTime @map("expires_at")
+// 11. registration
+model Registration {
+  registration_id   String    @id @db.VarChar(50)
+  booking_reference String    @unique @db.VarChar(100)
+  qr_code           String?   @db.VarChar(255)
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  user_id           String    @db.VarChar(50)
+  event_id          String    @db.VarChar(50)
+  event_seat_id     String?   @db.VarChar(50)
 
-  eventSeat EventSeat @relation(fields: [eventSeatId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       UserAccount @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  event      Event       @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  event_seat EventSeat?  @relation(fields: [event_seat_id], references: [event_seat_id], onDelete: SetNull)
 
-  @@index([expiresAt]) // used by sweeper cron job
-  @@map("seat_holds")
+  @@map("registration")
 }
 
-// ─────────────────────────────────────────────
-// BOOKING (Registration / Ticket)
-// ─────────────────────────────────────────────
-
-/// Confirmed registration. One per user per event. Contains the QR token.
-model Booking {
-  id                 String        @id @default(uuid())
-  bookingReferenceId String        @unique @map("booking_reference_id") // e.g. "CADT-2026-0001"
-  userId             String        @map("user_id")
-  eventId            String        @map("event_id")
-  eventSeatId        String?       @unique @map("event_seat_id")
-  status             BookingStatus @default(CONFIRMED)
-  qrCodeToken        String        @unique @default(uuid()) @map("qr_code_token")
-  checkedInAt        DateTime?     @map("checked_in_at") // timestamp of QR scan
-  checkedInBy        String?       @map("checked_in_by") // user_id of staff who scanned
-
-  // Soft delete
-  deletedAt DateTime? @map("deleted_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventSeat EventSeat? @relation(fields: [eventSeatId], references: [id])
-
-  @@unique([userId, eventId])
-  @@index([userId])
-  @@index([eventId])
-  @@index([qrCodeToken])
-  @@index([checkedInAt])
-  @@map("bookings")
-}
-
-// ─────────────────────────────────────────────
-// FAVORITES
-// ─────────────────────────────────────────────
-
+// 12. favorite
 model Favorite {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  eventId   String   @map("event_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  favorite_id String    @id @db.VarChar(50)
+  user_id     String    @db.VarChar(50)
+  event_id    String    @db.VarChar(50)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  UserAccount @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  event Event       @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
 
-  @@unique([userId, eventId])
-  @@index([userId])
-  @@map("favorites")
+  @@unique([user_id, event_id], map: "unique_user_bookmark")
+  @@map("favorite")
 }
 
-// ─────────────────────────────────────────────
-// TELEGRAM INTEGRATION
-// ─────────────────────────────────────────────
-
-/// Links a platform User to their Telegram chat thread (permanent).
-model TelegramLink {
-  id        String   @id @default(uuid())
-  userId    String   @unique @map("user_id")
-  chatId    String   @unique @map("chat_id")
-  username  String?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("telegram_links")
-}
-
-// ─────────────────────────────────────────────
-// FIX #2 — TELEGRAM LINK TOKEN
-// Spec §5.2: User clicks "Link Telegram" → system generates a one-time token.
-// User sends "/start <token>" to the bot. Bot webhook verifies token, saves chat_id.
-// Token expires after 15 minutes.
-// ─────────────────────────────────────────────
-
-/// Ephemeral one-time token for Telegram account linking flow.
-model TelegramLinkToken {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  token     String   @unique // random UUID sent to user as "/start <token>"
-  expiresAt DateTime @map("expires_at") // NOW() + 15 minutes
-  usedAt    DateTime? @map("used_at")   // set when bot webhook consumes it
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([expiresAt])
-  @@map("telegram_link_tokens")
-}
-
-// ─────────────────────────────────────────────
-// NOTIFICATIONS (In-app)
-// ─────────────────────────────────────────────
-
-/// In-app notification log for schedule changes, cancellations, reminders, etc.
+// 13. notification
 model Notification {
-  id          String           @id @default(uuid())
-  userId      String           @map("user_id")
-  // FIX #4 — typed + linked notifications
-  type        NotificationType @default(SYSTEM)
-  referenceId String?          @map("reference_id") // e.g. event_id that triggered this
-  title       String
-  message     String           @db.Text
-  isRead      Boolean          @default(false) @map("is_read")
-  sentAt      DateTime         @default(now()) @map("sent_at")
+  notification_id String           @id @db.VarChar(50)
+  user_id         String           @db.VarChar(50)
+  event_id        String?          @db.VarChar(50)
+  title           String           @db.VarChar(150)
+  message         String           @db.Text
+  type            NotificationType
+  is_read         Boolean?         @default(false)
+  created_at      DateTime?        @default(now()) @db.Timestamp(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  UserAccount            @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  event                 Event?                 @relation(fields: [event_id], references: [event_id], onDelete: SetNull)
+  telegram_notifications TelegramNotification[]
 
-  @@index([userId, isRead])
-  @@index([userId, type])
-  @@map("notifications")
+  @@index([user_id, is_read], map: "idx_user_inbox")
+  @@map("notification")
 }
 
-// ─────────────────────────────────────────────
-// NOTIFICATION PREFERENCES
-// ─────────────────────────────────────────────
+// 14. telegram_notification
+model TelegramNotification {
+  telegram_notification_id String         @id @db.VarChar(50)
+  notification_id          String         @db.VarChar(50)
+  message_text             String         @db.Text
+  status                   TelegramStatus @default(pending)
+  created_at               DateTime?      @default(now()) @db.Timestamp(6)
 
-model NotificationPreference {
-  id             String  @id @default(uuid())
-  userId         String  @unique @map("user_id")
-  eventReminders Boolean @default(true) @map("event_reminders") // 24h + 30m alerts
-  seatAlerts     Boolean @default(true) @map("seat_alerts") // < 20% seats left
-  newEvents      Boolean @default(true) @map("new_events") // new events in fav categories
-  eventUpdates   Boolean @default(true) @map("event_updates") // schedule/location changes
+  notification Notification @relation(fields: [notification_id], references: [notification_id], onDelete: Cascade)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notification_preferences")
+  @@index([status], map: "idx_telegram_bot_outbox")
+  @@map("telegram_notification")
 }
-
-// ─────────────────────────────────────────────
-// FIX #9 — CREDIT TRANSACTION LOG
-// Spec §2.1.7 + §5.4: Credits are awarded on check-in.
-// Storing only total_credits gives no audit trail. This table records
-// every credit change with reason, allowing admin corrections and
-// dispute resolution.
-// ─────────────────────────────────────────────
-
-/// Immutable audit log of every credit change on a user's account.
-model CreditTransaction {
-  id          String       @id @default(uuid())
-  userId      String       @map("user_id")
-  type        CreditTxType
-  amount      Int // positive = credit, negative = debit
-  balanceBefore Int        @map("balance_before") // snapshot before this tx
-  balanceAfter  Int        @map("balance_after")  // snapshot after this tx
-  referenceId String?      @map("reference_id")   // e.g. booking_id or event_id
-  note        String?      @db.Text // admin reason for manual adjustments
-  createdAt   DateTime     @default(now()) @map("created_at")
-  createdBy   String?      @map("created_by") // user_id of admin (null = system)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([createdAt])
-  @@index([type])
-  @@map("credit_transactions")
-}
-
-// ─────────────────────────────────────────────
-// ANALYTICS VIEWS (tracked via DB views / materialized)
-// See: docs/architecture/database/analytics.sql
-// ─────────────────────────────────────────────
