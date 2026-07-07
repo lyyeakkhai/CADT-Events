@@ -1,11 +1,11 @@
 import { Search, Bell } from 'lucide-react';
 import type { ViewType } from '../App';
+import { useNavigate } from 'react-router-dom';
 
 interface TopBarProps {
   currentView: ViewType;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  setCurrentView: (v: ViewType) => void;
   sidebarWidth: number;
 }
 
@@ -27,7 +27,9 @@ const viewBreadcrumb: Record<ViewType, string[]> = {
   notifications: ['Dashboard', 'Notifications'],
 };
 
-export default function TopBar({ currentView, searchQuery, setSearchQuery, setCurrentView, sidebarWidth }: TopBarProps) {
+export default function TopBar({ currentView, searchQuery, setSearchQuery, sidebarWidth }: TopBarProps) {
+  const navigate = useNavigate();
+
   return (
     <header className="topbar-root" style={{ left: sidebarWidth, transition: 'left 0.22s cubic-bezier(.4,0,.2,1)' }}>
       {/* Breadcrumb + Title */}
@@ -56,7 +58,7 @@ export default function TopBar({ currentView, searchQuery, setSearchQuery, setCu
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
-              if (currentView !== 'dashboard') setCurrentView('dashboard');
+              if (currentView !== 'dashboard') navigate('/');
             }}
             className="topbar-search-input"
           />
@@ -65,7 +67,7 @@ export default function TopBar({ currentView, searchQuery, setSearchQuery, setCu
         {/* Notification bell */}
         <button 
           className="topbar-icon-btn relative"
-          onClick={() => setCurrentView('notifications')}
+          onClick={() => navigate('/notifications')}
         >
           <Bell size={18} />
           <span className="topbar-notif-dot" />

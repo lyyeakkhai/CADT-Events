@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useRef, useState } from 'react';
 import type { ViewType } from '../App';
 import { ChevronRight, ChevronLeft, DownloadCloud, Plus, Calendar as CalIcon, Clock } from 'lucide-react';
@@ -8,7 +9,9 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { format } from 'date-fns';
 import './Calendar.css';
 
-export default function CalendarView({ onNavigate }: { onNavigate: (v: ViewType) => void }) {
+export default function CalendarView() {
+  const _nav = useNavigate();
+  const onNavigate = (v: string) => _nav(v === 'dashboard' ? '/' : '/' + v);
   const calendarRef = useRef<FullCalendar>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState('dayGridMonth');

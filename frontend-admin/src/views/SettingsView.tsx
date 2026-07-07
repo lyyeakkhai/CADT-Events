@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { ViewType } from '../App';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
