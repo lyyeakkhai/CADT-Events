@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { AcademicEvent } from '../data/eventData';
+import type { AcademicEvent } from '../../../features/events/data/eventData';
 import hidetoheal from '../../../assets/images/hidetoheal.jpg';
 import { useEventsApi } from '../../../services/api';
 import { Loader2 } from 'lucide-react';

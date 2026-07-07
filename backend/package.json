@@ -41,6 +41,7 @@
     "@types/node-telegram-bot-api": "^0.64.15",
     "@typescript-eslint/eslint-plugin": "^8.59.4",
     "@typescript-eslint/parser": "^8.59.4",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^10.4.0",
     "nodemon": "^3.1.14",
     "prisma": "^5.12.1",
