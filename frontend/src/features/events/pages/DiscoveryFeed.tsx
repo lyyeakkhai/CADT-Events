@@ -269,7 +269,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
             </button>
             <button
               onClick={onViewCalendarClick}
-              className="ml-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+              className="ml-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <Calendar className="w-3.5 h-3.5" /> Calendar
             </button>
@@ -293,7 +293,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
             <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Upcoming at CADT</h2>
             <p className="text-sm text-slate-500 mt-0.5">Academic events, workshops &amp; seminars for our community</p>
           </div>
-          <div className="hidden md:block text-xs font-medium text-slate-400">{filteredEvents.length} results</div>
+          <div className="hidden md:block text-sm font-medium text-slate-500">{filteredEvents.length} results</div>
         </div>
 
         {filteredEvents.length === 0 ? (
