@@ -21,6 +21,20 @@
   }
 }
 
+/* Hide Clerk development mode note for professional academy presentation (design review) */
+[data-clerk-component="footer"],
+.clerk-development-mode,
+[class*="development-mode"],
+[class*="clerk"] [class*="dev"],
+[class*="clerk"] [class*="banner"],
+.clerk-footer,
+footer[class*="clerk"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
 /* Your custom visual scrollbar matching premium administrative web applications stays perfectly fine below... */
 ::-webkit-scrollbar {
   width: 6px;
