@@ -25,8 +25,6 @@ export async function listEvents(req: Request, res: Response, next: NextFunction
       },
       include: {
         venue: { select: { name: true, address: true } },
-        categories: { include: { category: { select: { name: true, color: true } } } },
-        speakers: { include: { speaker: { select: { name: true, titleRole: true, profileImageUrl: true } } } },
         _count: { select: { bookings: true } },
       },
       orderBy: { startTimestamp: 'asc' },
@@ -69,14 +67,11 @@ export async function listAllEvents(req: Request, res: Response, next: NextFunct
 // ── GET /api/events/:id ──────────────────────────────────────────────────────
 export async function getEvent(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const id = (req.params as any).id as string;
     const event = await prisma.event.findFirst({
       where: { id, deletedAt: null },
       include: {
         venue: true,
-        categories: { include: { category: true } },
-        speakers: { include: { speaker: true } },
-        agendaItems: { include: { speaker: true }, orderBy: { sortOrder: 'asc' } },
         _count: { select: { bookings: true } },
       },
     });
@@ -112,10 +107,12 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
         description: body.description,
         startTimestamp: startTs,
         endTimestamp: endTs,
-        eventType: body.eventType,
+        eventType: body.eventType || 'Seminar',
+        location: body.location,
         coverImageUrl: body.coverImageUrl || null,
         creditValue: body.creditValue ?? 0,
         isFeatured: body.isFeatured ?? false,
+        capacity: body.capacity ?? null,
         status: body.status ?? 'DRAFT',
         ...(adminUser ? { adminId: adminUser.id } : {}),
       },
@@ -130,7 +127,7 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
 // ── PATCH /api/events/:id (admin only) ──────────────────────────────────────
 export async function updateEvent(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const id = (req.params as any).id as string;
     const body = req.body;
 
     const existing = await prisma.event.findFirst({ where: { id, deletedAt: null } });
@@ -144,9 +141,11 @@ export async function updateEvent(req: Request, res: Response, next: NextFunctio
         ...(body.startTimestamp ? { startTimestamp: new Date(body.startTimestamp) } : {}),
         ...(body.endTimestamp ? { endTimestamp: new Date(body.endTimestamp) } : {}),
         ...(body.eventType !== undefined ? { eventType: body.eventType } : {}),
+        ...(body.location !== undefined ? { location: body.location } : {}),
         ...(body.coverImageUrl !== undefined ? { coverImageUrl: body.coverImageUrl } : {}),
         ...(body.creditValue !== undefined ? { creditValue: body.creditValue } : {}),
         ...(body.isFeatured !== undefined ? { isFeatured: body.isFeatured } : {}),
+        ...(body.capacity !== undefined ? { capacity: body.capacity } : {}),
         ...(body.status !== undefined ? { status: body.status } : {}),
       },
     });
@@ -160,7 +159,7 @@ export async function updateEvent(req: Request, res: Response, next: NextFunctio
 // ── DELETE /api/events/:id — soft delete (admin only) ────────────────────────
 export async function deleteEvent(req: Request, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const id = (req.params as any).id as string;
     const existing = await prisma.event.findFirst({ where: { id, deletedAt: null } });
     if (!existing) throw new NotFoundError('Event not found');
 

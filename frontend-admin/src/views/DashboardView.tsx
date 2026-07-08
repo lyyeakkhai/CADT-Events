@@ -22,16 +22,21 @@ export default function DashboardView({ searchQuery = '' }: { searchQuery?: stri
   const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient.get('/events/all');
+      setEvents(res.data.data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let active = true;
-    apiClient.get('/events/all')
-      .then(res => {
-        if (active) setEvents(res.data.data);
-      })
-      .catch(console.error)
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    fetchEvents();
     return () => { active = false; };
   }, []);
 
@@ -70,6 +75,14 @@ export default function DashboardView({ searchQuery = '' }: { searchQuery?: stri
           >
             <Plus size={18} />
             Add New Event
+          </button>
+          <button 
+            onClick={fetchEvents}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
+            title="Refresh events list"
+          >
+            Refresh
           </button>
         </div>
       </header>
@@ -182,7 +195,7 @@ export default function DashboardView({ searchQuery = '' }: { searchQuery?: stri
                       <tr key={i} className="hover:bg-slate-50/70 transition-colors bg-white">
                         <td className="p-4">
                           <div className="font-bold text-slate-900">{row.title}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">ID: #{row.id.slice(0, 8)} • {row.location || 'TBA'}</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">ID: #{row.id?.slice(0, 8)} • {row.location || (row.venue?.name) || 'TBA'}</div>
                         </td>
                         <td className="p-4 text-sm text-slate-700">{new Date(row.startTimestamp).toLocaleDateString()}</td>
                         <td className="p-4">

@@ -13,6 +13,7 @@ interface EventForm {
   location: string;
   coverImageUrl: string;
   creditValue: number;
+  capacity: number | null;
   isFeatured: boolean;
   status: 'DRAFT' | 'PUBLISHED';
 }
@@ -26,6 +27,7 @@ const INITIAL: EventForm = {
   location: '',
   coverImageUrl: '',
   creditValue: 0,
+  capacity: null,
   isFeatured: false,
   status: 'DRAFT',
 };
@@ -38,8 +40,8 @@ export default function CreateEventView() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const set = (key: keyof EventForm, val: string | number | boolean) =>
-    setForm(prev => ({ ...prev, [key]: val }));
+  const set = (key: keyof EventForm, val: string | number | boolean | null) =>
+    setForm(prev => ({ ...prev, [key]: val as any }));
 
   // Checklist
   const hasTitle = form.title.trim().length >= 3;
@@ -69,6 +71,7 @@ export default function CreateEventView() {
         location: form.location,
         coverImageUrl: form.coverImageUrl || undefined,
         creditValue: form.creditValue,
+        capacity: form.capacity || undefined,
         isFeatured: form.isFeatured,
         status,
       });
@@ -137,7 +140,7 @@ export default function CreateEventView() {
                 <input
                   type="text"
                   value={form.title}
-                  onChange={e => set('title', e.target.value)}
+                  onChange={e => set('title', (e.target as HTMLInputElement).value)}
                   placeholder="e.g. Next-Gen AI Workshop 2024"
                   className="w-full input-glow p-3 text-sm transition-all"
                 />
@@ -146,7 +149,7 @@ export default function CreateEventView() {
                 <label className="block text-sm font-semibold text-slate-700">Event Type</label>
                 <select
                   value={form.eventType}
-                  onChange={e => set('eventType', e.target.value)}
+                  onChange={e => set('eventType', (e.target as HTMLSelectElement).value)}
                   className="w-full input-glow p-3 text-sm transition-all appearance-none cursor-pointer"
                   style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundPosition: 'right 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
                 >
@@ -180,7 +183,7 @@ export default function CreateEventView() {
                 <input
                   type="datetime-local"
                   value={form.startTimestamp}
-                  onChange={e => set('startTimestamp', e.target.value)}
+                  onChange={e => set('startTimestamp', (e.target as HTMLInputElement).value)}
                   className="w-full input-glow p-3 text-sm transition-all"
                 />
               </div>
@@ -189,7 +192,7 @@ export default function CreateEventView() {
                 <input
                   type="datetime-local"
                   value={form.endTimestamp}
-                  onChange={e => set('endTimestamp', e.target.value)}
+                  onChange={e => set('endTimestamp', (e.target as HTMLInputElement).value)}
                   className="w-full input-glow p-3 text-sm transition-all"
                 />
               </div>
@@ -202,7 +205,7 @@ export default function CreateEventView() {
                   <input
                     type="text"
                     value={form.location}
-                    onChange={e => set('location', e.target.value)}
+                    onChange={e => set('location', (e.target as HTMLInputElement).value)}
                     placeholder="e.g. Main Auditorium, Innovation Hub, Online"
                     className="w-full input-glow p-3 pl-10 text-sm transition-all"
                   />
@@ -220,7 +223,7 @@ export default function CreateEventView() {
             <textarea
               rows={6}
               value={form.description}
-              onChange={e => set('description', e.target.value)}
+              onChange={e => set('description', (e.target as HTMLTextAreaElement).value)}
               placeholder="Write your event description here..."
               className="w-full input-glow p-4 text-sm transition-all resize-y leading-relaxed"
             />
@@ -244,7 +247,7 @@ export default function CreateEventView() {
                 <input
                   type="url"
                   value={form.coverImageUrl}
-                  onChange={e => set('coverImageUrl', e.target.value)}
+                  onChange={e => set('coverImageUrl', (e.target as HTMLInputElement).value)}
                   placeholder="https://... (paste image URL)"
                   className="w-full input-glow p-3 text-sm transition-all"
                 />
@@ -286,7 +289,7 @@ export default function CreateEventView() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-slate-700">Credit Value (on attendance)</label>
                 <div className="relative">
@@ -294,20 +297,33 @@ export default function CreateEventView() {
                     type="number"
                     min={0}
                     value={form.creditValue}
-                    onChange={e => set('creditValue', Number(e.target.value))}
+                    onChange={e => set('creditValue', Number((e.target as HTMLInputElement).value))}
                     className="w-full input-glow p-3 pr-10 text-sm transition-all"
                   />
                   <Users className="absolute right-3 top-3 text-slate-400" size={18} />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Total Capacity (seats)</label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 100"
+                  value={form.capacity ?? ''}
+                  onChange={e => set('capacity', (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : null)}
+                  className="w-full input-glow p-3 text-sm transition-all"
+                />
+                <p className="text-[11px] text-slate-500">Leave empty for unlimited</p>
+              </div>
               
-              <div className="pt-2 md:pt-6">
+              <div className="pt-1 md:col-span-2">
                 <label className="flex items-center gap-3 cursor-pointer group p-3 border border-slate-200 rounded-xl hover:border-amber-400 hover:bg-amber-50/50 transition-colors">
                   <div className="relative flex items-center justify-center">
                     <input
                       type="checkbox"
                       checked={form.isFeatured}
-                      onChange={e => set('isFeatured', e.target.checked)}
+                      onChange={e => set('isFeatured', (e.target as HTMLInputElement).checked)}
                       className="peer sr-only"
                     />
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
@@ -357,6 +373,7 @@ export default function CreateEventView() {
                 { label: 'Start Date & Time', done: hasStart },
                 { label: 'Venue / Location', done: hasLocation },
                 { label: 'Cover Image (optional)', done: !!form.coverImageUrl, isOptional: true },
+                { label: 'Capacity (optional)', done: !!form.capacity, isOptional: true },
               ].map(({ label, done, isOptional }) => (
                 <li key={label} className={`flex items-start gap-3 text-sm ${done ? 'text-slate-900' : 'text-slate-500'}`}>
                   {done ? (
