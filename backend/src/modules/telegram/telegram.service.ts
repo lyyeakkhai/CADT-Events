@@ -26,7 +26,7 @@ export const initTelegramBot = () => {
 
     try {
       // Check if user exists
-      const user = await prisma.user.findUnique({
+      const user = await prisma.userAccount.findFirst({
         where: { id: userId }
       });
 
