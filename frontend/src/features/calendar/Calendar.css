@@ -62,3 +62,18 @@
 .custom-calendar-wrapper .fc-daygrid-day-frame {
   min-height: 120px;
 }
+
+/* Registered / Past event styling for student calendar */
+.custom-calendar-wrapper .fc-event.cal-registered {
+  background-color: #0b2c6a !important;
+  color: #fff !important;
+  border-left: 3px solid #f59e0b !important;
+}
+.custom-calendar-wrapper .fc-event.cal-past {
+  background-color: #64748b !important;
+  color: #f8fafc !important;
+  opacity: 0.85;
+}
+.custom-calendar-wrapper .fc-event.cal-default {
+  background-color: #0f172a !important;
+}

@@ -1,23 +1,51 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { AcademicEvent } from '../data/eventData';
+import { getEvent, type ApiEvent } from '../../../services/api';
+import { toAcademicEvent } from '../../../lib/eventMapper';
+import { getEventStatusLabel, isEventPast } from '../../../lib/utils';
 import IDRI from '../../../assets/images/innovationcenter.png';
+
 interface EventDetailsProps {
-  event: AcademicEvent;
+  event: AcademicEvent & { _apiId?: string };
   onBackClick: () => void;
   onRegisterClick: (event: AcademicEvent) => void;
 }
 
 export default function EventDetails({ event, onBackClick, onRegisterClick }: EventDetailsProps) {
-  
-  // Explicitly matching the speaker data arrays visible in your design spec sheet
-  const figmaSpeakers = [
+  const [fullEvent, setFullEvent] = useState<AcademicEvent & { _apiId?: string }>(event);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // Fetch freshest data (incl. availableSeats) when we have an api id
+  useEffect(() => {
+    const apiId = (event as any)._apiId || (event as any).id;
+    if (!apiId) return;
+    let cancelled = false;
+    setLoadingDetail(true);
+    getEvent(String(apiId))
+      .then((res) => {
+        if (!cancelled && res?.data) {
+          const mapped = toAcademicEvent(res.data as ApiEvent);
+          setFullEvent(mapped);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadingDetail(false); });
+    return () => { cancelled = true; };
+  }, [event]);
+
+  const displayEvent = fullEvent;
+  const seatsLeft = (displayEvent as any).seatsLeft ?? (displayEvent as any).availableSeats;
+  const past = displayEvent.isPast ?? isEventPast(displayEvent);
+  const statusLabel = getEventStatusLabel(displayEvent);
+
+  // Dynamic speaker block from available data (graceful)
+  const speakers = [
     {
-      name: event.speaker,
-      role: `FOUNDER OF ${event.badge === 'Seminar' ? 'SNEHA' : 'CADT LABS'}`,
-      bio: `Expert in specialized institutional training workflows and domain systems optimization.`,
-      image: event.image
+      name: displayEvent.speaker,
+      role: `CADT — ${displayEvent.badge || 'Event'}`,
+      bio: displayEvent.description?.slice(0, 140) || 'Details to be announced.',
+      image: displayEvent.image || event.image
     },
-   
   ];
 
   return (
@@ -54,19 +82,25 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
               INNOVATION & TECHNOLOGY
             </span>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight mb-4 max-w-xl">
-              {event.title.includes("Seminar") ? "Innovation Summit 2026" : event.title}
+              {displayEvent.title}
             </h1>
             
-            {/* Meta tags indicators strip */}
+            {/* Meta tags indicators strip (dynamic) */}
             <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-300">
               <div className="flex items-center gap-1.5">
                 <span>📅</span>
-                <span>{event.date}</span>
+                <span>{displayEvent.date} · {displayEvent.time}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span>📍</span>
-                <span>{event.venue}, CADT Campus</span>
+                <span>{displayEvent.venue}</span>
               </div>
+              {seatsLeft != null && (
+                <div className="flex items-center gap-1.5">
+                  <span>🎟️</span>
+                  <span>{seatsLeft} seats left</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -82,6 +116,15 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
         </div>
       </section>
 
+      {past && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold rounded-xl px-4 py-2 flex items-center gap-2">
+            <span>📅</span>
+            <span>This event has ended — status: {statusLabel}</span>
+          </div>
+        </div>
+      )}
+
       {/* Two-Column Primary Main Layout Content Area Matrix */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
@@ -94,11 +137,7 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
               About The Event
             </h2>
             <p className="text-sm font-medium text-slate-500 leading-relaxed mb-6">
-              Are you constantly burying yourself in schoolwork but feeling like you're running on empty? [cite: 181] 
-              It's time to step out of the shadows of burnout and step into a space of recovery[cite: 181]. 
-              The CADT Career Center is glad to invite you to a transformative session dedicated to your holistic well-being[cite: 181]. 
-              Too often, we hide our stress, isolate ourselves behind glowing screens, and push through exhaustion until we crash[cite: 181]. 
-              This session is your direct opportunity to heal, reset, and successfully reclaim your internal balance[cite: 181]. 🙏
+              {displayEvent.description || 'Join us for this CADT academic event. More details to follow.'}
             </p>
 
             {/* Quick Informational Grid Perks Tiles */}
@@ -127,7 +166,7 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
               Distinguished Speakers
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {figmaSpeakers.map((speaker, index) => (
+              {speakers.map((speaker, index) => (
                 <div key={index} className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-xs flex flex-col">
                   <div className="h-40 bg-slate-100 w-full overflow-hidden">
                     <img src={speaker.image} alt={speaker.name} className="w-full h-full object-cover object-top" />
@@ -215,26 +254,27 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
               <div className="flex justify-between items-center text-xs font-semibold">
                 <span className="text-slate-400">Availability</span>
                 <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  ● 62 Seats Left
+                  ● {seatsLeft != null ? `${seatsLeft} Seats Left` : 'Open'}
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs font-semibold">
-                <span className="text-slate-400">Early Bird Price</span>
-                <span className="text-sm font-extrabold text-slate-900">$15.00</span>
+                <span className="text-slate-400">Students</span>
+                <span className="text-xs font-black text-blue-600">FREE (CADT community)</span>
               </div>
               <div className="flex justify-between items-center text-xs font-semibold">
-                <span className="text-slate-400">Students</span>
-                <span className="text-xs font-black text-blue-600">FREE</span>
+                <span className="text-slate-400">Credits</span>
+                <span className="text-xs font-black text-amber-600">+{ (displayEvent as any).creditValue || 1 } upon attendance</span>
               </div>
             </div>
 
             {/* Sticky Action Triggers */}
             <div className="space-y-2 pt-1">
               <button 
-                onClick={() => onRegisterClick(event)}
-                className="w-full bg-[#0b2c6a] hover:bg-[#082050] text-white font-bold text-sm py-3 rounded-xl shadow-sm transition-all duration-150 cursor-pointer active:scale-[0.985]"
+                onClick={() => onRegisterClick(displayEvent)}
+                disabled={past || (seatsLeft != null && seatsLeft <= 0)}
+                className="w-full bg-[#0b2c6a] hover:bg-[#082050] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm py-3 rounded-xl shadow-sm transition-all duration-150 cursor-pointer active:scale-[0.985]"
               >
-                REGISTER NOW
+                {past ? 'EVENT COMPLETED' : (seatsLeft != null && seatsLeft <= 0 ? 'EVENT FULL' : 'REGISTER NOW')}
               </button>
               <button className="w-full bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 font-extrabold text-xs py-3 rounded-xl transition-colors cursor-pointer">
                 SAVE FOR LATER

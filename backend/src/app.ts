@@ -2,12 +2,13 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { clerkMiddleware } from "@clerk/express";
+import { clerkMiddleware, getAuth, clerkClient } from "@clerk/express";
 import { env } from "@/config/env";
 import { errorHandler } from "@/common/middleware/error-handler.middleware";
 import { clerkWebhookRouter } from "@/modules/webhooks/clerk.routes";
 import { eventRouter } from "@/modules/events/events.routes";
 import { bookingRouter } from "@/modules/bookings/bookings.routes";
+import { telegramRouter } from "@/modules/telegram/telegram.routes";
 
 export function createApp() {
   const app = express();
@@ -21,7 +22,9 @@ export function createApp() {
         "http://localhost:3000",  // admin frontend
         "http://localhost:3001",  // admin frontend (fallback port)
         "http://localhost:5174",
-      ],
+        process.env.FRONTEND_URL,
+        process.env.ADMIN_URL,
+      ].filter(Boolean) as string[],
       credentials: true,
     })
   );
@@ -33,7 +36,10 @@ export function createApp() {
   app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 200 }));
 
   // Initialize Clerk Middleware
-  app.use(clerkMiddleware());
+  app.use(clerkMiddleware({
+    secretKey: process.env.CLERK_SECRET_KEY,
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+  }));
 
   // Health check
   app.get("/api/health", (_req, res) => {
@@ -43,11 +49,13 @@ export function createApp() {
   // ── API Routes ──────────────────────────────────────────────────────────────
   app.use("/api/events", eventRouter);
   app.use("/api/bookings", bookingRouter);
+  app.use("/api/telegram", telegramRouter);
 
-  // Upload routes (admin only)
+  // Upload routes (admin only) - use the same requireAuth + requireRole as other admin routes
   const { uploadRoutes } = require("@/modules/upload/upload.routes");
   const { requireAuth, requireRole } = require("@/common/middleware/auth.middleware");
-  app.use("/api/upload", requireAuth, requireRole("ADMIN"), uploadRoutes);
+
+  app.use("/api/upload", requireAuth, requireRole('ADMIN'), uploadRoutes);
 
   // Error handler (must be last)
   app.use(errorHandler);

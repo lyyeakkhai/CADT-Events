@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserButton } from '@clerk/clerk-react';
-import Logo from '../../assets/images/CADT Event Logo (1).png';
+import Logo from '../../assets/images/CADT10-LOGO-anniversary-03.png';
 import { useUrlSearch } from '../../hooks/useUrlSearch';
 
 interface NavbarProps {
@@ -40,9 +40,9 @@ export default function Navbar({
             onClick={() => handleTabSelect('Discover')}
             className="flex items-center gap-2.5 cursor-pointer select-none group shrink-0"
           >
-            {/* White card badge pops the image out elegantly from the dark background */}
-            <div className="w-8 h-8 flex items-center justify-center bg-white p-1 rounded-xl border border-slate-700/50 shadow-md transition-all duration-200 group-hover:scale-110 group-hover:rotate-2 overflow-hidden shrink-0">
-              <img src={Logo} alt="CADT Event Logo" className="w-full h-full object-contain" />
+            {/* Logo badge - sized for the new anniversary logo */}
+            <div className="h-8 flex items-center justify-center bg-white px-1.5 py-0.5 rounded-xl border border-slate-700/50 shadow-md transition-all duration-200 group-hover:scale-110 overflow-hidden shrink-0">
+              <img src={Logo} alt="CADT Logo" className="h-full w-auto object-contain" />
             </div>
 
             <span className="text-[15px] font-black text-white tracking-tight group-hover:text-[#f59e0b] transition-colors duration-150">

@@ -55,19 +55,20 @@ clerkWebhookRouter.post('/', bodyParser.raw({ type: 'application/json' }), async
     }
 
     try {
-      await prisma.user.upsert({
+      await prisma.userAccount.upsert({
         where: { email: email },
         update: {
-          clerkId: id,
-          name: name || 'User',
-          role: role as any,
+          user_id: id,
+          full_name: name || 'User',
+          role: 'student',
         },
         create: {
-          clerkId: id,
+          user_id: id,
           email: email,
-          name: name || 'User',
-          role: role as any,
-        },
+          full_name: name || 'User',
+          role: 'student',
+          password_hash: 'managed-by-clerk',
+        }
       });
       
       // Update Clerk so the frontend immediately knows their role without a DB query

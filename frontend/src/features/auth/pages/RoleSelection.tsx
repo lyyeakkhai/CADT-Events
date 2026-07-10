@@ -1,5 +1,5 @@
 import React from 'react';
-import Logo from '../../../assets/images/CADT Event Logo (1).png'
+import Logo from '../../../assets/images/CADT10-LOGO-anniversary-03.png'
 interface RoleSelectionProps {
   onSelectRole: (role: 'student' | 'admin') => void;
 }
@@ -11,9 +11,9 @@ export default function RoleSelection({ onSelectRole }: RoleSelectionProps) {
       {/* Central Interactive Panel Wrapper Box */}
       <div className="w-full max-w-4xl bg-white/60 backdrop-blur-md rounded-3xl border border-blue/80 shadow-xl p-6 sm:p-10 md:p-14 flex flex-col items-center text-center animate-fade-in">
         
-        {/* Academic Center Top Icon Emblem Asset */}
+        {/* Logo */}
         <div>
-          <img src={Logo}  className="w-14 h-14  text-white rounded-xl flex items-center justify-center shadow-md mb-6 " />
+          <img src={Logo} className="h-14 w-auto rounded-xl shadow-md mb-6" />
         </div>
 
         {/* Framing Header Typography Matrix */}

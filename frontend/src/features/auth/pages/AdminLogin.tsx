@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Logo from '../../../assets/images/CADT Event Logo (1).png';
+import Logo from '../../../assets/images/CADT10-LOGO-anniversary-03.png';
 import { useAuth } from '../../../hooks/useAuth';
 
 interface AdminLoginProps {
@@ -42,7 +42,7 @@ export default function AdminLogin({ onBackClick }: AdminLoginProps) {
           
           <div className="text-center space-y-2 flex flex-col items-center">
             <div>
-              <img src={Logo} alt="CADT Logo" className="w-14 h-14 text-white rounded-xl flex items-center justify-center shadow-md mb-6 " />
+              <img src={Logo} alt="CADT Logo" className="h-14 w-auto rounded-xl shadow-md mb-6" />
             </div>
             <h2 className="text-xl font-black text-[#0f172a] tracking-tight">
               Admin Portal Login

@@ -19,6 +19,12 @@ export interface AcademicEvent {
   isFeatured?: boolean;
   _apiId?: string;
   seatsLeft?: number; // demo for home cards
+
+  // Dynamic/live additions
+  status?: string; // PUBLISHED | COMPLETED | etc from backend
+  endDate?: string; // formatted end
+  endTimestamp?: string; // raw ISO for comparisons
+  isPast?: boolean; // computed client-side
 }
 
 export const FIGMA_EVENTS_DATA: AcademicEvent[] = [

@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
-import { ChevronRight, UploadCloud, Users, CheckCircle2, Circle, Send, Loader2, AlertCircle, Calendar as CalendarIcon, MapPin, Image as ImageIcon, Settings2, Info } from 'lucide-react';
+import axios from 'axios';
+import { ChevronRight, UploadCloud, Users, CheckCircle2, Circle, Send, Loader2, AlertCircle, Calendar as CalendarIcon, MapPin, Image as ImageIcon, Settings2, Info, X } from 'lucide-react';
 import apiClient from '../lib/apiClient';
 
 interface EventForm {
@@ -35,13 +37,126 @@ const INITIAL: EventForm = {
 export default function CreateEventView() {
   const _nav = useNavigate();
   const onNavigate = (v: string) => _nav(v === 'dashboard' ? '/' : '/' + v);
+  const { getToken } = useAuth();
   const [form, setForm] = useState<EventForm>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Hold the selected File locally. Only upload to Cloudinary on actual event creation (confirm first).
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string>('');
+
+  // Manage local preview URL (from File) + cleanup to avoid memory leaks
+  useEffect(() => {
+    if (coverImageFile) {
+      const url = URL.createObjectURL(coverImageFile);
+      setLocalPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+        setLocalPreviewUrl('');
+      };
+    } else {
+      setLocalPreviewUrl('');
+    }
+  }, [coverImageFile]);
+
+  // Effective preview URL: prefer local file preview, fall back to pasted/remote URL
+  const previewImageUrl = localPreviewUrl || form.coverImageUrl;
+
+  // Note: We deliberately cache the File object and only call Cloudinary on actual "Save/Publish".
+  // This avoids uploading images to Cloudinary for events the user never ends up creating.
 
   const set = (key: keyof EventForm, val: string | number | boolean | null) =>
     setForm(prev => ({ ...prev, [key]: val as any }));
+
+  // Real image upload to backend (/api/upload -> Cloudinary)
+  // Uses the main apiClient + explicit token from hook for reliability
+  async function uploadImageFile(file: File): Promise<string> {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Please select an image file (PNG, JPG, etc.)');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('Image too large. Max 5MB.');
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    // Get token from hook (reliable here) and attach explicitly; interceptor will also clean Content-Type
+    let token = null;
+    try {
+      token = await getToken({ skipCache: true });
+    } catch (e) {}
+    if (!token && window.Clerk && window.Clerk.session) {
+      try {
+        // @ts-expect-error
+        token = await window.Clerk.session.getToken({ skipCache: true });
+      } catch (e) {}
+    }
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    console.log('[Admin Upload] Sending /upload via apiClient with token from hook:', !!token, 'fallback:', !!(window.Clerk && window.Clerk.session), 'final headers:', config.headers);
+
+    const res = await apiClient.post('/upload', formData, config);
+    const uploadedUrl = res.data?.url || res.data?.secure_url;
+    if (!uploadedUrl) {
+      throw new Error('Upload succeeded but no URL returned from server');
+    }
+    return uploadedUrl as string;
+  }
+
+  // Cache the file locally. We only upload to Cloudinary when the user confirms by clicking Save/Publish.
+  function handleImageFileSelect(file: File) {
+    console.log('[Admin Upload] handleImageFileSelect (caching file, upload on confirm)', file.name, file.size);
+    setError(null);
+    setIsDragging(false);
+    setCoverImageFile(file);
+    // Clear any previously pasted remote URL when choosing a local file
+    set('coverImageUrl', '');
+  }
+
+  function triggerFilePicker() {
+    console.log('[Admin Upload] triggerFilePicker called');
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    } else {
+      console.error('[Admin Upload] fileInputRef is null');
+    }
+  }
+
+  function handleFileInputChange(e: any) {
+    console.log('[Admin Upload] file input change', e.target?.files);
+    const file = e.target?.files?.[0];
+    if (file) {
+      handleImageFileSelect(file);
+    }
+    // reset input so same file can be selected again
+    if (e.target) e.target.value = '';
+  }
+
+  // Drag & drop support
+  function handleDrop(e: any) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleImageFileSelect(file);
+  }
+
+  function handleDragOver(e: any) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: any) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    setIsDragging(false);
+  }
 
   // Checklist
   const hasTitle = form.title.trim().length >= 3;
@@ -62,19 +177,50 @@ export default function CreateEventView() {
 
     try {
       setSubmitting(true);
-      await apiClient.post('/events', {
+      console.log('[CreateEvent] Starting submission with status:', status);
+
+      // Only upload to Cloudinary after user confirms "Create" (Save as Draft / Publish)
+      let finalCoverImageUrl = form.coverImageUrl || undefined;
+
+      if (coverImageFile) {
+        setUploadingImage(true);
+        try {
+          console.log('[Admin Upload] Uploading cached image to Cloudinary now (on create confirm)...');
+          finalCoverImageUrl = await uploadImageFile(coverImageFile);
+          console.log('[Admin Upload] Image uploaded on confirm, url=', finalCoverImageUrl);
+        } catch (err: any) {
+          const msg = err?.response?.data?.error || err?.message || 'Failed to upload image';
+          console.error('[CreateEvent] Image upload failed:', err);
+          setError(msg);
+          return; // do not create the event if image upload failed
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
+      const payload = {
         title: form.title,
         description: form.description,
         eventType: form.eventType,
         startTimestamp: start.toISOString(),
         endTimestamp: end.toISOString(),
         location: form.location,
-        coverImageUrl: form.coverImageUrl || undefined,
+        coverImageUrl: finalCoverImageUrl,
         creditValue: form.creditValue,
         capacity: form.capacity || undefined,
         isFeatured: form.isFeatured,
         status,
-      });
+      };
+      
+      console.log('[CreateEvent] Sending POST /events with payload:', payload);
+
+      const res = await apiClient.post('/events', payload);
+      console.log('[CreateEvent] Success response:', res.data);
+
+      // Clear cached file after successful creation
+      setCoverImageFile(null);
+      setLocalPreviewUrl('');
+
       setSuccess(true);
       setForm(INITIAL);
       setTimeout(() => {
@@ -82,10 +228,15 @@ export default function CreateEventView() {
         onNavigate('dashboard');
       }, 1800);
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to create event';
+      console.error('[CreateEvent] API Error:', err);
+      if (err.response) {
+        console.error('[CreateEvent] Error response data:', err.response.data);
+      }
+      const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? 'Failed to create event';
       setError(msg);
     } finally {
       setSubmitting(false);
+      setUploadingImage(false);
     }
   }
 
@@ -244,32 +395,93 @@ export default function CreateEventView() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-slate-700">Cover Image URL</label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={form.coverImageUrl}
+                    onChange={e => {
+                      const val = (e.target as HTMLInputElement).value;
+                      set('coverImageUrl', val);
+                      if (val) {
+                        // User pasted a remote URL → discard any pending local file
+                        setCoverImageFile(null);
+                      }
+                    }}
+                    placeholder="https://... (paste image URL)"
+                    className="flex-1 input-glow p-3 text-sm transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={triggerFilePicker}
+                    disabled={uploadingImage}
+                    className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {uploadingImage ? <Loader2 className="animate-spin" size={16} /> : <UploadCloud size={16} />}
+                    Upload
+                  </button>
+                </div>
+                {/* Hidden file input used by the upload area + Change button */}
                 <input
-                  type="url"
-                  value={form.coverImageUrl}
-                  onChange={e => set('coverImageUrl', (e.target as HTMLInputElement).value)}
-                  placeholder="https://... (paste image URL)"
-                  className="w-full input-glow p-3 text-sm transition-all"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileInputChange}
                 />
               </div>
               
-              {!form.coverImageUrl && (
-                <div className="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center bg-slate-50 hover:bg-slate-100 hover:border-amber-400 transition-all cursor-pointer group">
-                  <div className="w-12 h-12 bg-white shadow-sm rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                    <UploadCloud className="text-slate-400 group-hover:text-amber-500 transition-colors" size={24} />
-                  </div>
-                  <p className="text-sm text-slate-700 font-semibold mb-1">Click to upload or drag and drop</p>
-                  <p className="text-xs text-slate-500">SVG, PNG, JPG or GIF (max. 5MB)</p>
-                  <p className="text-xs text-slate-400 mt-2">Currently supports URL input above</p>
+              {!previewImageUrl && (
+                <div
+                  onClick={triggerFilePicker}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer group ${
+                    isDragging 
+                      ? 'border-amber-500 bg-amber-50 scale-[1.01]' 
+                      : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-amber-400'
+                  }`}
+                >
+                  {uploadingImage ? (
+                    <div className="flex flex-col items-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-amber-500 mb-3" />
+                      <p className="text-sm text-slate-600 font-medium">Uploading image...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 bg-white shadow-sm rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                        <UploadCloud className="text-slate-400 group-hover:text-amber-500 transition-colors" size={24} />
+                      </div>
+                      <p className="text-sm text-slate-700 font-semibold mb-1">Drag and drop image here</p>
+                      <p className="text-xs text-slate-500">or use the Upload button above</p>
+                      <p className="text-xs text-slate-500">PNG, JPG, WEBP or GIF (max 5MB)</p>
+                    </>
+                  )}
                 </div>
               )}
 
-              {form.coverImageUrl && (
+              {previewImageUrl && (
                 <div className="relative mt-4 rounded-xl overflow-hidden border border-slate-200 h-64 bg-slate-100 group">
-                  <img src={form.coverImageUrl} alt="preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e: any) => { e.target.style.display = 'none'; }} />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button type="button" onClick={() => set('coverImageUrl', '')} className="px-4 py-2 bg-white text-slate-900 text-sm font-bold rounded-lg shadow-lg hover:bg-slate-100 transition-colors">
-                      Remove Image
+                  <img src={previewImageUrl} alt="preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e: any) => { e.target.style.display = 'none'; }} />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={triggerFilePicker}
+                      disabled={uploadingImage}
+                      className="px-4 py-2 bg-white text-slate-900 text-sm font-bold rounded-lg shadow-lg hover:bg-amber-50 transition-colors flex items-center gap-2"
+                    >
+                      <UploadCloud size={16} /> Change Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoverImageFile(null);
+                        set('coverImageUrl', '');
+                      }}
+                      className="px-4 py-2 bg-white/90 text-slate-900 text-sm font-bold rounded-lg shadow-lg hover:bg-red-50 hover:text-red-600 transition-colors flex items-center gap-1.5"
+                    >
+                      <X size={16} /> Remove
                     </button>
                   </div>
                 </div>
@@ -372,7 +584,7 @@ export default function CreateEventView() {
                 { label: 'Description (min 10 chars)', done: hasDescription },
                 { label: 'Start Date & Time', done: hasStart },
                 { label: 'Venue / Location', done: hasLocation },
-                { label: 'Cover Image (optional)', done: !!form.coverImageUrl, isOptional: true },
+                { label: 'Cover Image (optional)', done: !!previewImageUrl, isOptional: true },
                 { label: 'Capacity (optional)', done: !!form.capacity, isOptional: true },
               ].map(({ label, done, isOptional }) => (
                 <li key={label} className={`flex items-start gap-3 text-sm ${done ? 'text-slate-900' : 'text-slate-500'}`}>
@@ -410,8 +622,8 @@ export default function CreateEventView() {
               </span>
             </div>
             <div className="h-40 relative bg-slate-100">
-              {form.coverImageUrl ? (
-                <img src={form.coverImageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display = 'none'; }} />
+              {previewImageUrl ? (
+                <img src={previewImageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display = 'none'; }} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                    <ImageIcon size={32} className="text-slate-300" />

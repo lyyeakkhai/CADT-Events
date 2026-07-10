@@ -1,31 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Calendar, RotateCcw, X, SlidersHorizontal, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, Calendar, RotateCcw, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import EventCard from '../../../components/EventCard';
-import { FIGMA_EVENTS_DATA } from '../../../features/events/data/eventData';
 import type { AcademicEvent } from '../../../features/events/data/eventData';
-import { getEvents, type ApiEvent } from '../../../services/api';
+import { getEvents } from '../../../services/api';
 import { useUrlSearch } from '../../../hooks/useUrlSearch';
-
-// Convert backend ApiEvent to the local AcademicEvent shape the UI expects
-function toAcademicEvent(e: ApiEvent): AcademicEvent {
-  return {
-    id: e.id as any,
-    title: e.title,
-    speaker: e.speakers?.[0]?.speaker?.name ?? 'CADT',
-    date: new Date(e.startTimestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    time: new Date(e.startTimestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    venue: e.venue?.name ?? 'TBA',
-    dept: 'All',
-    type: (e.eventType as AcademicEvent['type']) ?? 'Seminar',
-    badge: e.eventType ?? 'Event',
-    image: e.coverImageUrl ?? '',
-    description: e.description,
-    isFeatured: e.isFeatured,
-    seatsLeft: 25, // demo default; backend integration can enhance
-    // Keep original id for API calls
-    _apiId: e.id,
-  } as AcademicEvent & { _apiId: string };
-}
+import { toAcademicEvent } from '../../../lib/eventMapper';
+import { getEventStatusLabel, isEventPast } from '../../../lib/utils';
 
 interface DiscoveryFeedProps {
   onSelectEvent?: (event: AcademicEvent) => void;
@@ -37,11 +17,11 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
   const [selectedDept, setSelectedDept] = useState<string>('All');
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>('This Month');
   const [currentSlide, setCurrentSlide] = useState<number>(0);
-  const [apiEvents, setApiEvents] = useState<AcademicEvent[] | null>(null);
+  const [apiEvents, setApiEvents] = useState<AcademicEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch from backend; fall back to mock data if it fails
+  // Fetch from backend
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -49,13 +29,17 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
     getEvents()
       .then((res) => {
         if (!cancelled) {
-          setApiEvents(res.data.map(toAcademicEvent));
+          const mapped = (res.data || []).map(toAcademicEvent);
+          setApiEvents(mapped);
+          if (mapped.length === 0) {
+            setError('No published events yet.');
+          }
         }
       })
       .catch((e) => {
         if (!cancelled) {
-          setError('Unable to load live events. Showing curated list.');
-          setApiEvents(null); // fall back to FIGMA_EVENTS_DATA
+          setError('Unable to load live events from backend.');
+          setApiEvents([]);
         }
       })
       .finally(() => {
@@ -64,7 +48,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
     return () => { cancelled = true; };
   }, []);
 
-  const allEvents = apiEvents ?? FIGMA_EVENTS_DATA;
+  const allEvents = apiEvents;
 
   const featuredEvents = useMemo(() => {
     return allEvents.filter(event => event.isFeatured === true);
@@ -143,6 +127,9 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
               <span className="text-white/70 text-[11px] tracking-wider font-medium border border-white/30 px-2.5 py-0.5 rounded">
                 {featuredEvents[currentSlide].badge}
               </span>
+              {(featuredEvents[currentSlide].isPast || getEventStatusLabel(featuredEvents[currentSlide]) === 'Completed') && (
+                <span className="bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded tracking-wider">COMPLETED</span>
+              )}
             </div>
 
             <h1 
@@ -168,7 +155,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
               onClick={() => onSelectEvent && onSelectEvent(featuredEvents[currentSlide])}
               className="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-[#0b2c6a] text-sm font-bold tracking-[0.3px] rounded-lg shadow transition-all active:scale-[0.985] cursor-pointer"
             >
-              Register Now →
+              {(featuredEvents[currentSlide].isPast || getEventStatusLabel(featuredEvents[currentSlide]) === 'Completed') ? 'View Details' : 'Register Now →'}
             </button>
           </div>
 

@@ -4,33 +4,57 @@ import type { Request, Response, NextFunction } from 'express';
 import { NotFoundError, ConflictError, BadRequestError } from '@/common/errors/app-error';
 import type { CreateEventInput } from '@/common/schemas';
 
+const mapEvent = (e: any) => ({
+  id: e.event_id,
+  title: e.event_title,
+  description: e.description,
+  startTimestamp: e.start_time,
+  endTimestamp: e.end_time,
+  coverImageUrl: e.cover_image_url,
+  eventType: e.event_type,
+  status: (e.status || 'draft').toUpperCase(),
+  isFeatured: e.is_featured ?? false,
+  creditValue: e.credit_value ?? 0,
+  capacity: e.capacity ?? null,
+  location: e.location || (e.venue ? e.venue.venue_name : null),
+  venue: e.venue ? { name: e.venue.venue_name, address: e.venue.venue_name } : null,
+  availableSeats: e.capacity != null ? Math.max(0, e.capacity - (e._count?.registrations || 0)) : null,
+  _count: { bookings: e._count?.registrations || 0 }
+});
+
 // ── GET /api/events ─────────────────────────────────────────────────────────
 export async function listEvents(req: Request, res: Response, next: NextFunction) {
   try {
     const { status, search, featured } = req.query;
 
+    // Public list: published + ongoing + completed so students can see historical events on calendar
+    const allowedPublic = ['published', 'ongoing', 'completed'];
+    const statusFilter = status
+      ? { status: status as any }
+      : { status: { in: allowedPublic } };
+
     const events = await prisma.event.findMany({
       where: {
-        deletedAt: null,
-        ...(status ? { status: status as any } : { status: 'PUBLISHED' }),
-        ...(featured === 'true' ? { isFeatured: true } : {}),
+        deleted_at: null,
+        ...statusFilter,
+        ...(featured === 'true' ? { is_featured: true } : {}),
         ...(search
           ? {
               OR: [
-                { title: { contains: String(search), mode: 'insensitive' } },
+                { event_title: { contains: String(search), mode: 'insensitive' } },
                 { description: { contains: String(search), mode: 'insensitive' } },
               ],
             }
           : {}),
       },
       include: {
-        venue: { select: { name: true, address: true } },
-        _count: { select: { bookings: true } },
+        venue: { select: { venue_name: true } },
+        _count: { select: { registrations: true } },
       },
-      orderBy: { startTimestamp: 'asc' },
+      orderBy: { start_time: 'asc' },
     });
 
-    res.json({ success: true, data: events });
+    res.json({ success: true, data: events.map(mapEvent) });
   } catch (err) {
     next(err);
   }
@@ -42,23 +66,24 @@ export async function listAllEvents(req: Request, res: Response, next: NextFunct
     const { search } = req.query;
     const events = await prisma.event.findMany({
       where: {
-        deletedAt: null,
+        deleted_at: null,
         ...(search
           ? {
               OR: [
-                { title: { contains: String(search), mode: 'insensitive' } },
+                { event_title: { contains: String(search), mode: 'insensitive' } },
                 { description: { contains: String(search), mode: 'insensitive' } },
               ],
             }
           : {}),
       },
       include: {
-        venue: { select: { name: true } },
-        _count: { select: { bookings: true } },
+        venue: { select: { venue_name: true } },
+        _count: { select: { registrations: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
     });
-    res.json({ success: true, data: events });
+
+    res.json({ success: true, data: events.map(mapEvent) });
   } catch (err) {
     next(err);
   }
@@ -69,15 +94,16 @@ export async function getEvent(req: Request, res: Response, next: NextFunction) 
   try {
     const id = (req.params as any).id as string;
     const event = await prisma.event.findFirst({
-      where: { id, deletedAt: null },
+      where: { event_id: id, deleted_at: null },
       include: {
         venue: true,
-        _count: { select: { bookings: true } },
+        _count: { select: { registrations: true } },
       },
     });
 
     if (!event) throw new NotFoundError('Event not found');
-    res.json({ success: true, data: event });
+
+    res.json({ success: true, data: mapEvent(event) });
   } catch (err) {
     next(err);
   }
@@ -86,40 +112,46 @@ export async function getEvent(req: Request, res: Response, next: NextFunction) 
 // ── POST /api/events (admin only) ───────────────────────────────────────────
 export async function createEvent(req: Request, res: Response, next: NextFunction) {
   try {
+    console.log('[Backend createEvent] Request received');
     const auth = getAuth(req);
+    console.log('[Backend createEvent] Auth user ID:', auth?.userId);
     const body = req.body as CreateEventInput;
+    console.log('[Backend createEvent] Request body:', JSON.stringify(body, null, 2));
 
-    // Resolve admin user in DB via clerkId
-    const adminUser = await prisma.user.findUnique({
-      where: { clerkId: auth.userId! },
-    });
+    const adminUser = await prisma.admin.findFirst(); // stub
 
     const startTs = new Date(body.startTimestamp);
     const endTs = new Date(body.endTimestamp);
 
     if (endTs <= startTs) {
+      console.warn('[Backend createEvent] Validation failed: End time before start time');
       throw new BadRequestError('End time must be after start time');
     }
+    
+    const uuid = require('crypto').randomUUID();
 
+    console.log('[Backend createEvent] Inserting into database...');
     const event = await prisma.event.create({
       data: {
-        title: body.title,
+        event_id: uuid,
+        event_title: body.title,
         description: body.description,
-        startTimestamp: startTs,
-        endTimestamp: endTs,
-        eventType: body.eventType || 'Seminar',
-        location: body.location,
-        coverImageUrl: body.coverImageUrl || null,
-        creditValue: body.creditValue ?? 0,
-        isFeatured: body.isFeatured ?? false,
+        start_time: startTs,
+        end_time: endTs,
+        event_type: (body.eventType?.toLowerCase() as any) || 'seminar',
+        cover_image_url: body.coverImageUrl || null,
+        is_featured: body.isFeatured ?? false,
         capacity: body.capacity ?? null,
-        status: body.status ?? 'DRAFT',
-        ...(adminUser ? { adminId: adminUser.id } : {}),
+        credit_value: body.creditValue ?? 0,
+        location: body.location || null,
+        status: (body.status?.toLowerCase() as any) ?? 'draft',
       },
     });
 
-    res.status(201).json({ success: true, data: event });
+    console.log('[Backend createEvent] Successfully created event ID:', event.event_id);
+    res.status(201).json({ success: true, data: mapEvent(event) });
   } catch (err) {
+    console.error('[Backend createEvent] Error during event creation:', err);
     next(err);
   }
 }
@@ -130,27 +162,26 @@ export async function updateEvent(req: Request, res: Response, next: NextFunctio
     const id = (req.params as any).id as string;
     const body = req.body;
 
-    const existing = await prisma.event.findFirst({ where: { id, deletedAt: null } });
+    const existing = await prisma.event.findFirst({ where: { event_id: id, deleted_at: null } });
     if (!existing) throw new NotFoundError('Event not found');
 
     const updated = await prisma.event.update({
-      where: { id },
+      where: { event_id: id },
       data: {
-        ...(body.title !== undefined ? { title: body.title } : {}),
+        ...(body.title !== undefined ? { event_title: body.title } : {}),
         ...(body.description !== undefined ? { description: body.description } : {}),
-        ...(body.startTimestamp ? { startTimestamp: new Date(body.startTimestamp) } : {}),
-        ...(body.endTimestamp ? { endTimestamp: new Date(body.endTimestamp) } : {}),
-        ...(body.eventType !== undefined ? { eventType: body.eventType } : {}),
-        ...(body.location !== undefined ? { location: body.location } : {}),
-        ...(body.coverImageUrl !== undefined ? { coverImageUrl: body.coverImageUrl } : {}),
-        ...(body.creditValue !== undefined ? { creditValue: body.creditValue } : {}),
-        ...(body.isFeatured !== undefined ? { isFeatured: body.isFeatured } : {}),
+        ...(body.startTimestamp ? { start_time: new Date(body.startTimestamp) } : {}),
+        ...(body.endTimestamp ? { end_time: new Date(body.endTimestamp) } : {}),
+        ...(body.coverImageUrl !== undefined ? { cover_image_url: body.coverImageUrl } : {}),
+        ...(body.isFeatured !== undefined ? { is_featured: body.isFeatured } : {}),
         ...(body.capacity !== undefined ? { capacity: body.capacity } : {}),
-        ...(body.status !== undefined ? { status: body.status } : {}),
+        ...(body.creditValue !== undefined ? { credit_value: body.creditValue } : {}),
+        ...(body.location !== undefined ? { location: body.location } : {}),
+        ...(body.status !== undefined ? { status: body.status?.toLowerCase() } : {}),
       },
     });
 
-    res.json({ success: true, data: updated });
+    res.json({ success: true, data: mapEvent(updated) });
   } catch (err) {
     next(err);
   }
@@ -160,10 +191,10 @@ export async function updateEvent(req: Request, res: Response, next: NextFunctio
 export async function deleteEvent(req: Request, res: Response, next: NextFunction) {
   try {
     const id = (req.params as any).id as string;
-    const existing = await prisma.event.findFirst({ where: { id, deletedAt: null } });
+    const existing = await prisma.event.findFirst({ where: { event_id: id, deleted_at: null } });
     if (!existing) throw new NotFoundError('Event not found');
 
-    await prisma.event.update({ where: { id }, data: { deletedAt: new Date() } });
+    await prisma.event.update({ where: { event_id: id }, data: { deleted_at: new Date() } });
     res.json({ success: true, message: 'Event deleted' });
   } catch (err) {
     next(err);

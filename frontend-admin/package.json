@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "eslint . && tsc --noEmit"
+    "lint": "eslint . && tsc --noEmit",
+    "mcp": "npx @playwright/mcp --port 8931 --host 0.0.0.0 --headless"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

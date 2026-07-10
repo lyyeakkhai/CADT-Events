@@ -61,24 +61,24 @@ export default function BookingConfirmed({
                 Participant Pass
               </span>
               <p className="text-white text-sm font-black leading-snug">
-                <span className="font-black">Seminar</span> {event.title}
+                {event.badge || 'Event'} · {event.title}
               </p>
             </div>
           </div>
 
-          {/* Event Details */}
+          {/* Event Details (dynamic from real booking) */}
           <div className="px-6 py-5 grid grid-cols-2 gap-4 border-b border-slate-100">
             <div>
               <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Date</p>
-              <p className="text-xs font-bold text-slate-900 leading-relaxed">Date: Wednesday, June<br />3rd, 2026</p>
+              <p className="text-xs font-bold text-slate-900 leading-relaxed">{event.date}</p>
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Time</p>
-              <p className="text-xs font-bold text-slate-900">8:30 a.m. – 11:00 a.m.</p>
+              <p className="text-xs font-bold text-slate-900">{event.time}</p>
             </div>
             <div className="col-span-2">
               <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Venue</p>
-              <p className="text-xs font-bold text-slate-900">CADT Main Auditorium, Block G-12</p>
+              <p className="text-xs font-bold text-slate-900">{event.venue}</p>
             </div>
           </div>
 

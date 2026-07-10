@@ -5,29 +5,10 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { format } from 'date-fns';
-import { getEvents, type ApiEvent } from '../../services/api';
+import { getEvents, type ApiEvent, useEventsApi } from '../../services/api';
 import type { AcademicEvent } from '../events/data/eventData';
 import './Calendar.css';
-
-// Re-using the conversion logic to keep data format consistent
-function toAcademicEvent(e: ApiEvent): AcademicEvent {
-  return {
-    id: e.id as any,
-    title: e.title,
-    speaker: e.speakers?.[0]?.speaker?.name ?? 'CADT',
-    date: new Date(e.startTimestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    time: new Date(e.startTimestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    venue: e.venue?.name ?? 'TBA',
-    dept: 'All',
-    type: (e.eventType as AcademicEvent['type']) ?? 'Seminar',
-    badge: e.eventType ?? 'Event',
-    image: e.coverImageUrl ?? '',
-    description: e.description,
-    isFeatured: e.isFeatured,
-    seatsLeft: 25,
-    _apiId: e.id,
-  } as AcademicEvent & { _apiId: string };
-}
+import { toAcademicEvent } from '../../lib/eventMapper';
 
 interface CalendarViewProps {
   onSelectEvent?: (event: AcademicEvent) => void;
@@ -40,34 +21,53 @@ export default function CalendarView({ onSelectEvent, onGoHome }: CalendarViewPr
   const [currentView, setCurrentView] = useState('dayGridMonth');
   
   const [apiEvents, setApiEvents] = useState<ApiEvent[]>([]);
+  const [myBookings, setMyBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { getMyBookings } = useEventsApi();
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchEvents() {
+    async function fetchAll() {
       try {
         setLoading(true);
-        const res = await getEvents();
-        if (res.success && !cancelled) {
-          setApiEvents(res.data);
+        const [eventsRes, bookings] = await Promise.all([
+          getEvents(),
+          getMyBookings().catch(() => [] as any[]), // non-fatal if not logged or no bookings
+        ]);
+        if (!cancelled) {
+          if (eventsRes.success) setApiEvents(eventsRes.data);
+          setMyBookings(bookings || []);
         }
       } catch (error) {
-        console.error('Failed to fetch events for calendar:', error);
+        console.error('Failed to fetch events/bookings for calendar:', error);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    fetchEvents();
+    fetchAll();
     return () => { cancelled = true; };
   }, []);
 
-  const calendarEvents = apiEvents.map((event) => ({
-    id: event.id,
-    title: event.title,
-    start: event.startTimestamp,
-    end: event.endTimestamp,
-    extendedProps: { rawData: event }
-  }));
+  const registeredEventIds = new Set(myBookings.map((b: any) => b.event?.id || b.eventId));
+
+  const calendarEvents = apiEvents.map((event) => {
+    const isRegistered = registeredEventIds.has(event.id);
+    const end = event.endTimestamp ? new Date(event.endTimestamp) : null;
+    const isPast = end ? end < new Date() : new Date(event.startTimestamp) < new Date();
+    const title = isPast ? `${event.title} (Done)` : (isRegistered ? `${event.title} ★` : event.title);
+
+    return {
+      id: event.id,
+      title,
+      start: event.startTimestamp,
+      end: event.endTimestamp,
+      classNames: [
+        isPast ? 'cal-past' : (isRegistered ? 'cal-registered' : 'cal-default'),
+      ],
+      extendedProps: { rawData: event, isRegistered, isPast },
+    };
+  });
 
   const handlePrev = () => {
     const calendarApi = calendarRef.current?.getApi();
@@ -115,7 +115,7 @@ export default function CalendarView({ onSelectEvent, onGoHome }: CalendarViewPr
             Event Calendar
           </h1>
           <p className="text-slate-500 mt-2 max-w-2xl text-sm md:text-base font-medium">
-            Stay up to date with all upcoming events, workshops, and seminars.
+            All events (past &amp; future). ★ = you are registered. Gray = completed.
           </p>
         </div>
       </div>
@@ -197,6 +197,8 @@ export default function CalendarView({ onSelectEvent, onGoHome }: CalendarViewPr
               <div className="space-y-4">
                 {calendarEvents.slice(0, 5).map((ev, i) => {
                   const evDate = new Date(ev.start);
+                  const isReg = (ev as any).extendedProps?.isRegistered;
+                  const pastEv = (ev as any).extendedProps?.isPast;
                   return (
                   <div 
                     key={i} 
@@ -208,7 +210,11 @@ export default function CalendarView({ onSelectEvent, onGoHome }: CalendarViewPr
                       <span className="block text-xl font-bold text-slate-800 leading-none mt-1 group-hover:text-white transition-colors">{format(evDate, 'dd')}</span>
                     </div>
                     <div className="overflow-hidden py-1 flex flex-col justify-center">
-                      <h4 className="font-bold text-sm text-slate-800 group-hover:text-[#0b2c6a] transition-colors truncate">{ev.title}</h4>
+                      <h4 className="font-bold text-sm text-slate-800 group-hover:text-[#0b2c6a] transition-colors truncate flex items-center gap-1.5">
+                        {ev.title}
+                        {isReg && <span className="text-[9px] px-1.5 py-px bg-emerald-100 text-emerald-700 rounded font-black">REGISTERED</span>}
+                        {pastEv && <span className="text-[9px] px-1.5 py-px bg-slate-200 text-slate-600 rounded font-black">DONE</span>}
+                      </h4>
                       <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 font-medium">
                         <Clock size={12} /> {format(evDate, 'hh:mm a')}
                       </p>
@@ -216,7 +222,7 @@ export default function CalendarView({ onSelectEvent, onGoHome }: CalendarViewPr
                   </div>
                 )})}
                 {calendarEvents.length === 0 && (
-                  <p className="text-sm text-slate-500 text-center py-4 font-medium">No upcoming events found.</p>
+                  <p className="text-sm text-slate-500 text-center py-4 font-medium">No events found.</p>
                 )}
               </div>
             )}

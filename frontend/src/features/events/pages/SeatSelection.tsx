@@ -81,8 +81,12 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
   const { bookEvent } = useEventsApi();
   const [submitting, setSubmitting] = useState(false);
 
+  const seatsLeft = (event as any).seatsLeft ?? (event as any).availableSeats;
+  const isFull = seatsLeft != null && seatsLeft <= 0;
+  const isPast = (event as any).isPast === true || new Date((event as any).endTimestamp || 0) < new Date();
+
   const handleRegister = async () => {
-    if (!selectedSeat) return;
+    if (!selectedSeat || isFull || isPast) return;
     setSubmitting(true);
     try {
       let bookingId = 'MOCK-ID';
@@ -266,7 +270,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
               />
               <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm">
                 <p className="text-sm font-black text-amber-600 leading-tight">{speakerName}</p>
-                <p className="text-[10px] font-semibold text-slate-500">the founder of Sneha</p>
+                <p className="text-[10px] font-semibold text-slate-500">{event.badge || 'Event'} @ CADT</p>
               </div>
             </div>
 
@@ -278,19 +282,19 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
                   <svg className="w-3.5 h-3.5 mt-0.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                   </svg>
-                  <span>Date: Wednesday, June 3rd, 2026</span>
+                  <span>Date: {event.date}</span>
                 </div>
                 <div className="flex items-start gap-2.5 text-xs font-medium text-slate-500">
                   <svg className="w-3.5 h-3.5 mt-0.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
-                  <span>Time: 8:30 a.m. – 11:00 a.m.</span>
+                  <span>Time: {event.time}</span>
                 </div>
                 <div className="flex items-start gap-2.5 text-xs font-medium text-slate-500">
                   <svg className="w-3.5 h-3.5 mt-0.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
                   </svg>
-                  <span>Grand Auditorium, Building C</span>
+                  <span>{event.venue}</span>
                 </div>
               </div>
 
@@ -310,15 +314,15 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
 
               <button
                 onClick={handleRegister}
-                disabled={!selectedSeat || submitting}
+                disabled={!selectedSeat || submitting || isFull || isPast}
                 className={`w-full py-3 rounded-xl text-sm font-extrabold tracking-wide flex items-center justify-center gap-2 transition-all duration-150 ${
-                  selectedSeat && !submitting
+                  selectedSeat && !submitting && !isFull && !isPast
                     ? 'bg-slate-900 hover:bg-blue-900 text-white shadow-sm hover:shadow active:scale-[0.98] cursor-pointer'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                {submitting ? <Loader2 className="animate-spin" size={18} /> : 'Register for Free'}
-                {selectedSeat && !submitting && (
+                {submitting ? <Loader2 className="animate-spin" size={18} /> : isPast ? 'Event Completed' : isFull ? 'Event Full' : 'Register for Free'}
+                {selectedSeat && !submitting && !isFull && !isPast && (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>

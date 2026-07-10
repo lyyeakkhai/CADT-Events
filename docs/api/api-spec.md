@@ -109,8 +109,8 @@ Get single event detail.
 
 ## Booking Routes (`/api/bookings`) - Protected
 
-### POST `/api/events/:id/book`
-Book a ticket for an event.
+### POST `/api/bookings`
+Book a ticket for an event (body: `{ "eventId": "..." }`). Capacity enforced server-side.
 
 **Response 201:**
 ```json

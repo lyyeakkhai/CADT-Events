@@ -193,9 +193,9 @@ export default function DashboardView({ searchQuery = '' }: { searchQuery?: stri
                       const full = pct >= 100;
                       return (
                       <tr key={i} className="hover:bg-slate-50/70 transition-colors bg-white">
-                        <td className="p-4">
+                        <td className="p-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => onNavigate('events/' + row.id)}>
                           <div className="font-bold text-slate-900">{row.title}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">ID: #{row.id?.slice(0, 8)} • {row.location || (row.venue?.name) || 'TBA'}</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">ID: #{row.id?.slice(0, 8)} • {row.location || ((row as any).venue?.name) || 'TBA'}</div>
                         </td>
                         <td className="p-4 text-sm text-slate-700">{new Date(row.startTimestamp).toLocaleDateString()}</td>
                         <td className="p-4">
@@ -219,7 +219,7 @@ export default function DashboardView({ searchQuery = '' }: { searchQuery?: stri
                           </span>
                         </td>
                         <td className="p-4 text-right">
-                          <button className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
+                          <button onClick={() => onNavigate('events/' + row.id)} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
                             <Edit2 size={16} />
                           </button>
                         </td>

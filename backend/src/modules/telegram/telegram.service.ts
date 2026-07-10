@@ -1,7 +1,9 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { prisma } from '@/lib/prisma';
+import { clerkClient } from '@clerk/express';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
+const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'CADTEventsBot';
 
 // Initialize bot if token exists
 export const bot = token ? new TelegramBot(token, { polling: true }) : null;
@@ -14,7 +16,7 @@ export const initTelegramBot = () => {
 
   console.log('🤖 Telegram bot is running...');
 
-  // Listen for the deep link start command, e.g. /start user_12345
+  // Listen for the deep link start command, e.g. /start <clerkUserId>
   bot.onText(/\/start (.+)/, async (msg, match) => {
     const chatId = msg.chat.id.toString();
     const userId = match ? match[1] : null;
@@ -25,63 +27,153 @@ export const initTelegramBot = () => {
     }
 
     try {
-      // Check if user exists
-      const user = await prisma.userAccount.findFirst({
-        where: { id: userId }
+      // Check if user exists by clerk user_id
+      let user = await prisma.userAccount.findFirst({
+        where: { user_id: userId }
       });
 
+      // If user isn't in DB yet (e.g. local dev without webhooks), try fetching from Clerk and creating
       if (!user) {
-        bot.sendMessage(chatId, "❌ We couldn't find your account. Please try registering again.");
+        try {
+          const clerkUser = await clerkClient.users.getUser(userId);
+          const email = clerkUser.emailAddresses?.[0]?.emailAddress || `user-${userId}@cadt.edu.kh`;
+          const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ').trim() || (email.split('@')[0] || 'CADT User');
+          user = await prisma.userAccount.create({
+            data: { 
+              user_id: userId, 
+              email, 
+              full_name: name, 
+              role: 'student',
+              password_hash: 'managed-by-clerk'
+            },
+          });
+        } catch (err) {
+          console.error('Failed to create user during telegram link:', err);
+        }
+      }
+
+      if (!user) {
+        bot.sendMessage(chatId, "❌ We couldn't find your account. Please try registering again via the CADT Events site.");
         return;
       }
 
-      // Upsert the TelegramLink (model may be added in later phase)
-      // @ts-ignore temporary until telegramLink model added
-      await (prisma as any).telegramLink.upsert({
-        where: { userId: user.id },
-        update: {
-          chatId: chatId,
-          username: msg.chat.username,
+      // Link directly using the column on UserAccount
+      await prisma.userAccount.update({
+        where: { user_id: userId },
+        data: {
+          telegram_chat_id: chatId,
         },
-        create: {
-          userId: user.id,
-          chatId: chatId,
-          username: msg.chat.username,
+      });
+
+      // Update Clerk metadata so it's globally available for the frontend
+      await clerkClient.users.updateUserMetadata(userId, {
+        publicMetadata: {
+          telegram_chat_id: chatId
         }
       });
 
-      bot.sendMessage(chatId, `✅ Welcome ${user.name}! Your Telegram is now connected. You will receive event alerts here.`);
-      
+      bot.sendMessage(
+        chatId,
+        `✅ Welcome ${user.full_name || 'CADT user'}! Your Telegram is now connected to CADT Events.\n\nYou will receive booking confirmations, reminders, and updates here.`
+      );
     } catch (error) {
-      console.error("Error linking Telegram:", error);
-      bot.sendMessage(chatId, "❌ An error occurred while linking your account. Please try again later.");
+      console.error('Error linking Telegram:', error);
+      bot.sendMessage(chatId, '❌ An error occurred while linking your account. Please try again later.');
     }
   });
 
   // Handle generic /start (without payload)
   bot.onText(/\/start$/, (msg) => {
-    bot.sendMessage(msg.chat.id, "Welcome! To receive event alerts, please click the 'Connect Telegram' button on our website.");
+    bot.sendMessage(
+      msg.chat.id,
+      "Welcome to CADT Events Bot!\n\nTo receive notifications, go to the website, sign in, and use the 'Connect Telegram' button to get your personal link."
+    );
   });
 };
 
+export interface TelegramMessageOptions {
+  imageUrl?: string | null;
+  buttonUrl?: string;
+  buttonText?: string;
+}
+
 /**
- * Utility function to send alerts to all users who have connected their Telegram
+ * Send a message directly to a single linked Telegram user by their internal userId (clerk id).
+ */
+export const sendTelegramToUser = async (userId: string, message: string, options?: TelegramMessageOptions) => {
+  if (!bot) return false;
+  try {
+    const user = await prisma.userAccount.findUnique({
+      where: { user_id: userId },
+      select: { telegram_chat_id: true, full_name: true },
+    });
+    if (!user?.telegram_chat_id) return false;
+
+    const botOptions: any = { parse_mode: 'HTML' };
+    if (options?.buttonText && options?.buttonUrl) {
+      botOptions.reply_markup = {
+        inline_keyboard: [[{ text: options.buttonText, url: options.buttonUrl }]]
+      };
+    }
+
+    if (options?.imageUrl) {
+      await bot.sendPhoto(user.telegram_chat_id, options.imageUrl, {
+        caption: message,
+        parse_mode: 'HTML',
+        ...botOptions
+      });
+    } else {
+      await bot.sendMessage(user.telegram_chat_id, message, botOptions);
+    }
+    return true;
+  } catch (error) {
+    console.error(`Failed to send Telegram to user ${userId}:`, error);
+    return false;
+  }
+};
+
+/**
+ * Send a message to a specific chat id (when you already resolved it).
+ */
+export const sendTelegramToChat = async (chatId: string, message: string) => {
+  if (!bot) return;
+  try {
+    await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+  } catch (error) {
+    console.error(`Failed to send to chatId ${chatId}:`, error);
+  }
+};
+
+/**
+ * Utility: broadcast to ALL users who have linked Telegram.
+ * (Used for admin global announcements.)
  */
 export const sendEventAlertToAll = async (message: string) => {
   if (!bot) return;
 
   try {
-    // @ts-ignore temporary until telegramLink model added
-    const links = await (prisma as any).telegramLink.findMany();
-    
-    for (const link of links) {
-      try {
-        await bot.sendMessage(link.chatId, message, { parse_mode: 'HTML' });
-      } catch (error) {
-        console.error(`Failed to send message to chatId ${link.chatId}:`, error);
+    const linkedUsers = await prisma.userAccount.findMany({
+      where: { telegram_chat_id: { not: null } },
+      select: { telegram_chat_id: true },
+    });
+
+    for (const u of linkedUsers) {
+      if (u.telegram_chat_id) {
+        try {
+          await bot.sendMessage(u.telegram_chat_id, message, { parse_mode: 'HTML' });
+        } catch (error) {
+          console.error(`Failed to send message to chatId ${u.telegram_chat_id}:`, error);
+        }
       }
     }
   } catch (error) {
-    console.error("Error fetching telegram links for broadcast:", error);
+    console.error('Error fetching users for Telegram broadcast:', error);
   }
 };
+
+/**
+ * Helper for booking confirmations etc. Pass the userId (clerk) + formatted message.
+ */
+export const notifyUserViaTelegram = sendTelegramToUser;
+
+export { botUsername };

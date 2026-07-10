@@ -5,7 +5,7 @@ import './index.css';
 
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
-import Logo from './assets/images/CADT Event Logo (1).png';
+import Logo from './assets/images/CADT10-LOGO-anniversary-03.png';
 
 import DiscoveryFeed from './features/events/pages/DiscoveryFeed';
 import EventDetails from './features/events/pages/EventDetail';
@@ -16,8 +16,11 @@ import About from './features/events/pages/About';
 import CalendarView from './features/calendar/CalendarView';
 
 import ProtectedRoute from './components/ProtectedRoute';
+import TelegramConnectPrompt from './components/TelegramConnectPrompt';
 
 import type { AcademicEvent } from './features/events/data/eventData';
+import { getEvent, type ApiEvent } from './services/api';
+import { toAcademicEvent } from './lib/eventMapper';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -152,16 +155,28 @@ function AuthenticatedApp() {
   const [seatSelectionEvent, setSeatSelectionEvent] = useState<AcademicEvent | null>(null);
   const [bookingInfo, setBookingInfo] = useState<BookingInfo | null>(null);
 
+  // Telegram prompt state — show once after register/auth unless dismissed
+  const [showTelegramPrompt, setShowTelegramPrompt] = useState(false);
+
   useEffect(() => {
     if (user) {
       const role = user.publicMetadata?.role as string;
       const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
       
       if (isAdmin) {
-        window.location.href = 'http://localhost:3000';
+        window.location.href = import.meta.env.VITE_ADMIN_URL || 'http://localhost:3000';
         return;
       }
       setActiveTab('Discover');
+
+      // Show Telegram prompt shortly after first authenticated load (unless previously dismissed this browser)
+      try {
+        const dismissed = localStorage.getItem('telegramPromptDismissed');
+        if (!dismissed) {
+          const t = setTimeout(() => setShowTelegramPrompt(true), 1400);
+          return () => clearTimeout(t);
+        }
+      } catch {}
     }
   }, [user]);
 
@@ -172,6 +187,22 @@ function AuthenticatedApp() {
     setSelectedEvent(null);
     setSeatSelectionEvent(null);
     setBookingInfo(null);
+  };
+
+  // When selecting an event card/detail, try to fetch the full live version (for seats etc)
+  const selectEvent = async (ev: AcademicEvent) => {
+    const apiId = (ev as any)._apiId || (ev as any).id;
+    if (apiId) {
+      try {
+        const res = await getEvent(String(apiId));
+        if (res?.data) {
+          const enriched = toAcademicEvent(res.data as ApiEvent);
+          setSelectedEvent(enriched);
+          return;
+        }
+      } catch {}
+    }
+    setSelectedEvent(ev);
   };
 
   if (bookingInfo) {
@@ -233,7 +264,7 @@ function AuthenticatedApp() {
             />
           ) : (
             <DiscoveryFeed
-              onSelectEvent={(event) => setSelectedEvent(event)}
+              onSelectEvent={selectEvent}
               onViewCalendarClick={() => setActiveTab('Calendar')}
             />
           )
@@ -243,7 +274,7 @@ function AuthenticatedApp() {
           <About onExploreEventsClick={() => setActiveTab('Discover')} />
         ) : activeTab === 'Calendar' ? (
           <CalendarView 
-            onSelectEvent={(event) => setSelectedEvent(event)}
+            onSelectEvent={selectEvent}
             onGoHome={() => setActiveTab('Discover')}
           />
         ) : (
@@ -258,6 +289,18 @@ function AuthenticatedApp() {
       </div>
 
       <Footer onLinkClick={() => { setSelectedEvent(null); setSeatSelectionEvent(null); }} />
+
+      {/* Telegram prompt shown after login / register */}
+      <TelegramConnectPrompt
+        open={showTelegramPrompt}
+        onClose={() => {
+          setShowTelegramPrompt(false);
+          try { localStorage.setItem('telegramPromptDismissed', '1'); } catch {}
+        }}
+        onConnected={() => {
+          // Optionally refresh some UI state or show toast in future
+        }}
+      />
     </div>
   );
 }

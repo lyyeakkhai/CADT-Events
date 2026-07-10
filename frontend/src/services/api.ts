@@ -1,9 +1,9 @@
 // Central API client for the user frontend.
-// Reads VITE_API_URL from env (defaults to localhost:5000).
+// Reads VITE_API_URL from env (defaults to localhost:4000 matching backend).
 // All requests to auth-protected routes pass the Clerk JWT automatically.
 import { useAuth } from '@clerk/clerk-react';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface ApiEvent {
@@ -17,9 +17,12 @@ export interface ApiEvent {
   isFeatured: boolean;
   creditValue: number;
   status: string;
+  capacity?: number | null;
+  availableSeats?: number | null;
   venue: { name: string; address: string | null } | null;
-  categories: { category: { name: string; color: string | null } }[];
-  speakers: { speaker: { name: string; titleRole: string | null; profileImageUrl: string | null } }[];
+  // Note: speakers/categories not yet modeled on Event; converters fall back gracefully
+  categories?: { category: { name: string; color: string | null } }[];
+  speakers?: { speaker: { name: string; titleRole: string | null; profileImageUrl: string | null } }[];
   _count: { bookings: number };
 }
 
@@ -28,6 +31,7 @@ export interface ApiBooking {
   bookingReferenceId: string;
   status: string;
   qrCodeToken: string;
+  checkedInAt?: string | null;
   createdAt: string;
   event: {
     id: string;
@@ -37,15 +41,26 @@ export interface ApiBooking {
     coverImageUrl: string | null;
     eventType: string | null;
     status: string;
+    creditValue?: number;
     venue: { name: string; address: string | null } | null;
   };
+}
+
+export interface TelegramConnectData {
+  botUsername: string;
+  deepLink: string | null;
+  instructions?: string;
+  message?: string;
 }
 
 // ── Helper: bare fetch (public routes) ───────────────────────────────────────
 async function publicFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`);
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message ?? `API error ${res.status}`);
+  if (!res.ok) {
+    const msg = json?.error || json?.message || `API error ${res.status}`;
+    throw new Error(msg);
+  }
   return json as T;
 }
 
@@ -60,7 +75,10 @@ async function authFetch<T>(path: string, token: string, options?: RequestInit):
     },
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message ?? `API error ${res.status}`);
+  if (!res.ok) {
+    const msg = json?.error || json?.message || `API error ${res.status}`;
+    throw new Error(msg);
+  }
   return json as T;
 }
 
@@ -106,4 +124,18 @@ export function useEventsApi() {
   }
 
   return { bookEvent, getMyBookings, cancelBooking };
+}
+
+// ── Telegram (authenticated) ────────────────────────────────────────────────
+export function useTelegramApi() {
+  const { getToken } = useAuth();
+
+  async function getConnectLink(): Promise<TelegramConnectData> {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await authFetch<{ success: boolean; data: TelegramConnectData }>('/telegram/connect', token);
+    return res.data;
+  }
+
+  return { getConnectLink };
 }

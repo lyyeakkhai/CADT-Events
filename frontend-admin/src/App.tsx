@@ -13,6 +13,7 @@ import CreateEventView from './views/CreateEventView';
 import ProtectedRoute from './components/ProtectedRoute';
 import SettingsView from './views/SettingsView';
 import NotificationsView from './views/NotificationsView';
+import EventDetailView from './views/EventDetailView';
 
 export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create' | 'settings' | 'notifications';
 
@@ -25,7 +26,7 @@ function AdminApp() {
   const location = useLocation();
 
   const path = location.pathname.split('/')[1] || '';
-  const validPaths = ['export', 'calendar', 'create', 'settings', 'notifications'];
+  const validPaths = ['export', 'calendar', 'create', 'settings', 'notifications', 'events'];
   const currentView: ViewType = (validPaths.includes(path) ? path : 'dashboard') as ViewType;
 
   const sidebarWidth = isCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
@@ -73,6 +74,7 @@ function AdminApp() {
             <Route path="/export" element={<ExportView />} />
             <Route path="/calendar" element={<CalendarView />} />
             <Route path="/create" element={<CreateEventView />} />
+            <Route path="/events/:id" element={<EventDetailView />} />
             <Route path="/settings" element={<SettingsView />} />
             <Route path="/notifications" element={<NotificationsView />} />
             <Route path="*" element={<DashboardView searchQuery={searchQuery} />} />

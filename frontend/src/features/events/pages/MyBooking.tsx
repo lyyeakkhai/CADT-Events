@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import drone from '../../../assets/images/drone.jpg';
 import { useEventsApi, type ApiBooking } from '../../../services/api';
+import { useUser } from '@clerk/clerk-react';
 
 export default function MyBooking() {
   const { getMyBookings, cancelBooking } = useEventsApi();
@@ -31,8 +32,15 @@ export default function MyBooking() {
     }
   };
 
-  const nextBooking = bookings.find(b => b.status === 'CONFIRMED');
-  const pastBookings = bookings.filter(b => b.status !== 'CONFIRMED' || b !== nextBooking);
+  const now = new Date();
+  const isUpcoming = (b: ApiBooking) => new Date(b.event.endTimestamp || b.event.startTimestamp) >= now;
+
+  const upcomingBookings = bookings.filter(b => b.status === 'CONFIRMED' && isUpcoming(b));
+  const pastBookings = bookings.filter(b => !isUpcoming(b) || b.status !== 'CONFIRMED');
+
+  const attendedBookings = bookings.filter(b => b.checkedInAt != null);
+  const eventsAttended = attendedBookings.length;
+  const creditsEarned = attendedBookings.reduce((sum, b) => sum + (b.event.creditValue || 0), 0);
 
   if (loading) {
     return (
@@ -60,15 +68,15 @@ export default function MyBooking() {
           </div>
 
           {/* Next Event Card */}
-          {nextBooking ? (
+          {upcomingBookings[0] ? (
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
             <div className="flex flex-col md:flex-row">
 
               {/* Hero Image */}
               <div className="relative w-full md:w-[420px] h-[260px] md:h-auto shrink-0 bg-slate-900">
                 <img
-                  src={nextBooking.event.coverImageUrl || drone}
-                  alt={nextBooking.event.title}
+                  src={upcomingBookings[0].event.coverImageUrl || drone}
+                  alt={upcomingBookings[0].event.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-luminosity"
                   onError={(e: any) => { e.target.src = drone; }}
                 />
@@ -78,7 +86,7 @@ export default function MyBooking() {
                     Confirmed
                   </span>
                   <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    {nextBooking.event.title}
+                    {upcomingBookings[0].event.title}
                   </h3>
                 </div>
               </div>
@@ -96,7 +104,7 @@ export default function MyBooking() {
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Date</p>
                       <p className="text-sm font-extrabold text-slate-900">
-                        {new Date(nextBooking.event.startTimestamp).toLocaleDateString()}
+                        {new Date(upcomingBookings[0].event.startTimestamp).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -110,7 +118,7 @@ export default function MyBooking() {
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Time</p>
                       <p className="text-sm font-extrabold text-slate-900">
-                        {new Date(nextBooking.event.startTimestamp).toLocaleTimeString()}
+                        {new Date(upcomingBookings[0].event.startTimestamp).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
@@ -124,7 +132,7 @@ export default function MyBooking() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Venue</p>
-                      <p className="text-sm font-extrabold text-slate-900 line-clamp-1">{nextBooking.event.venue?.name || 'TBA'}</p>
+                      <p className="text-sm font-extrabold text-slate-900 line-clamp-1">{upcomingBookings[0].event.venue?.name || 'TBA'}</p>
                     </div>
                   </div>
 
@@ -137,7 +145,7 @@ export default function MyBooking() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Booking ID</p>
-                      <p className="text-sm font-extrabold text-slate-900">{nextBooking.bookingReferenceId}</p>
+                      <p className="text-sm font-extrabold text-slate-900">{upcomingBookings[0].bookingReferenceId}</p>
                     </div>
                   </div>
                 </div>
@@ -157,7 +165,7 @@ export default function MyBooking() {
                     </svg>
                     Modify Booking
                   </button>
-                  <button onClick={() => handleCancel(nextBooking.id)} className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 font-extrabold text-xs px-5 py-3 rounded-xl transition-colors cursor-pointer">
+                  <button onClick={() => handleCancel(upcomingBookings[0].id)} className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 font-extrabold text-xs px-5 py-3 rounded-xl transition-colors cursor-pointer">
                     Cancel
                   </button>
                 </div>
@@ -237,7 +245,7 @@ export default function MyBooking() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-400">Events Attended</p>
-                <p className="text-lg font-black text-slate-900">24</p>
+                <p className="text-lg font-black text-slate-900">{eventsAttended}</p>
               </div>
             </div>
 
@@ -249,7 +257,7 @@ export default function MyBooking() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-400">Credits Earned</p>
-                <p className="text-lg font-black text-slate-900">1,240</p>
+                <p className="text-lg font-black text-slate-900">{creditsEarned.toLocaleString()}</p>
               </div>
             </div>
 
@@ -261,7 +269,7 @@ export default function MyBooking() {
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-400">Reviews Left</p>
-                <p className="text-lg font-black text-slate-900">18</p>
+                <p className="text-lg font-black text-slate-900">0</p>
               </div>
             </div>
           </div>
@@ -291,6 +299,19 @@ export default function MyBooking() {
                 </li>
               ))}
             </ul>
+            {useUser().user?.publicMetadata?.telegram_chat_id ? (
+              <div className="mt-3 w-full text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg py-2 flex items-center justify-center gap-2 cursor-default">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                Telegram Connected
+              </div>
+            ) : (
+              <button
+                onClick={() => { localStorage.removeItem('telegramPromptDismissed'); window.location.reload(); }}
+                className="mt-3 w-full text-xs font-bold text-[#0b2c6a] border border-[#0b2c6a]/30 rounded-lg py-2 hover:bg-[#0b2c6a]/5 transition-colors cursor-pointer"
+              >
+                Connect Telegram for notifications →
+              </button>
+            )}
           </div>
 
         </aside>
