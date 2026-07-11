@@ -14,8 +14,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import SettingsView from './views/SettingsView';
 import NotificationsView from './views/NotificationsView';
 import EventDetailView from './views/EventDetailView';
+import UsersView from './views/UsersView';
 
-export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create' | 'settings' | 'notifications';
+export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create' | 'settings' | 'notifications' | 'users';
 
 const SIDEBAR_W = 240;
 const SIDEBAR_W_COLLAPSED = 64;
@@ -26,7 +27,7 @@ function AdminApp() {
   const location = useLocation();
 
   const path = location.pathname.split('/')[1] || '';
-  const validPaths = ['export', 'calendar', 'create', 'settings', 'notifications', 'events'];
+  const validPaths = ['export', 'calendar', 'create', 'settings', 'notifications', 'events', 'users'];
   const currentView: ViewType = (validPaths.includes(path) ? path : 'dashboard') as ViewType;
 
   const sidebarWidth = isCollapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W;
@@ -77,6 +78,7 @@ function AdminApp() {
             <Route path="/events/:id" element={<EventDetailView />} />
             <Route path="/settings" element={<SettingsView />} />
             <Route path="/notifications" element={<NotificationsView />} />
+            <Route path="/users" element={<UsersView />} />
             <Route path="*" element={<DashboardView searchQuery={searchQuery} />} />
           </Routes>
         </main>

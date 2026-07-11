@@ -15,7 +15,7 @@ export default function SettingsView({}: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState('general');
 
   return (
-    <div className="p-8 max-w-5xl mx-auto flex flex-col gap-8 pb-20 fade-in">
+    <div className="p-8 w-full flex flex-col gap-8 pb-20 fade-in">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">

@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
+  Users,
 } from 'lucide-react';
 import { UserButton } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
@@ -22,6 +23,7 @@ interface SidebarProps {
 
 const navItems = [
   { id: 'dashboard' as ViewType, label: 'Management', icon: LayoutDashboard },
+  { id: 'users' as ViewType, label: 'Users', icon: Users },
   { id: 'calendar' as ViewType, label: 'Calendar', icon: Calendar },
   { id: 'create' as ViewType, label: 'Create Event', icon: Plus },
   { id: 'export' as ViewType, label: 'Export', icon: Download },

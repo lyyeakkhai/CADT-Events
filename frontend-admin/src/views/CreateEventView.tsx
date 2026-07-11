@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
 import axios from 'axios';
-import { ChevronRight, UploadCloud, Users, CheckCircle2, Circle, Send, Loader2, AlertCircle, Calendar as CalendarIcon, MapPin, Image as ImageIcon, Settings2, Info, X } from 'lucide-react';
+import { ChevronRight, UploadCloud, Users, CheckCircle2, Circle, Send, Loader2, AlertCircle, Calendar as CalendarIcon, MapPin, Image as ImageIcon, Settings2, Info, X, Lightbulb } from 'lucide-react';
 import apiClient from '../lib/apiClient';
 
 interface EventForm {
@@ -603,7 +603,7 @@ export default function CreateEventView() {
             <div className="mt-6 pt-5 border-t border-slate-100">
                <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-4">
                   <h4 className="font-bold text-amber-800 mb-1.5 text-sm flex items-center gap-1.5">
-                    <span className="text-lg">💡</span> Pro-Tip
+                    <Lightbulb size={18} className="text-amber-600" /> Pro-Tip
                   </h4>
                   <p className="text-amber-700/80 text-xs leading-relaxed font-medium">
                     Events with high-resolution cover images and detailed descriptions see a <strong className="text-amber-800">40% higher</strong> registration rate.

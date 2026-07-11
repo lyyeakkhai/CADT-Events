@@ -50,6 +50,12 @@ export function createApp() {
   app.use("/api/events", eventRouter);
   app.use("/api/bookings", bookingRouter);
   app.use("/api/telegram", telegramRouter);
+  
+  const { notificationRouter } = require("@/modules/notifications/notifications.routes");
+  app.use("/api/notifications", notificationRouter);
+
+  const { favoriteRouter } = require("@/modules/favorites/favorites.routes");
+  app.use("/api/favorites", favoriteRouter);
 
   // Upload routes (admin only) - use the same requireAuth + requireRole as other admin routes
   const { uploadRoutes } = require("@/modules/upload/upload.routes");

@@ -139,3 +139,66 @@ export function useTelegramApi() {
 
   return { getConnectLink };
 }
+
+// ── Notifications (authenticated) ───────────────────────────────────────────
+export interface ApiNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
+  event: { id: string; title: string } | null;
+}
+
+export function useNotificationsApi() {
+  const { getToken } = useAuth();
+
+  async function getMyNotifications(): Promise<ApiNotification[]> {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await authFetch<{ success: boolean; data: ApiNotification[] }>('/notifications/me', token);
+    return res.data;
+  }
+
+  async function markAsRead(notificationId: string): Promise<void> {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated');
+    await authFetch(`/notifications/${notificationId}/read`, token, { method: 'PATCH' });
+  }
+
+  return { getMyNotifications, markAsRead };
+}
+
+// ── Favorites (authenticated) ───────────────────────────────────────────────
+export interface ApiFavorite {
+  favoriteId: string;
+  userId: string;
+  eventId: string;
+  createdAt: string;
+  event: ApiEvent;
+}
+
+export function useFavoritesApi() {
+  const { getToken } = useAuth();
+
+  async function getMyFavorites(): Promise<ApiFavorite[]> {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await authFetch<{ success: boolean; data: ApiFavorite[] }>('/favorites/me', token);
+    return res.data;
+  }
+
+  async function toggleFavorite(eventId: string): Promise<{ action: 'added' | 'removed' }> {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await authFetch<{ success: boolean; data: { action: 'added' | 'removed' } }>(
+      '/favorites/toggle',
+      token,
+      { method: 'POST', body: JSON.stringify({ eventId }) }
+    );
+    return res.data;
+  }
+
+  return { getMyFavorites, toggleFavorite };
+}

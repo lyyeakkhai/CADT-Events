@@ -105,88 +105,33 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick }: Di
     <div className="w-full flex flex-col bg-slate-50">
       
       {/* =======================================================================
-          HERO CAROUSEL SLIDER BLOCK (Vector Layout Update)
+          HERO SESSION (Static Design per User Request)
          ======================================================================= */}
-      {featuredEvents.length > 0 && (
-        <section className="relative w-full h-[340px] md:h-[400px] overflow-hidden bg-[#0b2c6a] flex items-center group border-b border-[#0b2c6a]/80">
-          {/* Stronger, legible hero treatment (better contrast, institutional navy base) */}
-          <div className="absolute inset-0 z-0">
-            <img 
-              src={featuredEvents[currentSlide].image} 
-              alt={featuredEvents[currentSlide].title} 
-              className="w-full h-full object-cover opacity-40"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0b2c6a] via-[#0b2c6a]/90 to-[#0b2c6a]/70" />
-          </div>
+      <section className="relative w-full h-[450px] md:h-[550px] lg:h-[650px] overflow-hidden bg-[#0b2c6a] flex items-center border-b border-[#0b2c6a]/80">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/innovation.png" 
+            alt="CADT Innovation Building" 
+            className="w-full h-full object-cover object-center"
+          />
+          {/* Deep blue gradient on the left half matching CADT primary brand color */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0b2c6a] via-[#0b2c6a]/85 to-transparent w-full md:w-4/5 lg:w-2/3" />
+        </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 text-left space-y-4">
-            <div className="flex items-center gap-2 select-none">
-              <span className="bg-amber-400 text-[#0b2c6a] text-[10px] tracking-[1px] font-bold uppercase px-3 py-0.5 rounded-md">
-                FEATURED
-              </span>
-              <span className="text-white/70 text-[11px] tracking-wider font-medium border border-white/30 px-2.5 py-0.5 rounded">
-                {featuredEvents[currentSlide].badge}
-              </span>
-              {(featuredEvents[currentSlide].isPast || getEventStatusLabel(featuredEvents[currentSlide]) === 'Completed') && (
-                <span className="bg-white/20 text-white text-[10px] font-black px-2 py-0.5 rounded tracking-wider">COMPLETED</span>
-              )}
-            </div>
-
-            <h1 
-              onClick={() => onSelectEvent && onSelectEvent(featuredEvents[currentSlide])}
-              className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-[-0.015em] leading-[1.05] mb-2 max-w-4xl cursor-pointer hover:text-amber-300 transition-colors duration-150"
-            >
-              {featuredEvents[currentSlide].title}
-            </h1>
-            
-            <p className="text-white/85 text-[15px] sm:text-base font-medium max-w-2xl leading-relaxed mb-4 line-clamp-2">
-              {featuredEvents[currentSlide].description}
-            </p>
-            
-            <div className="flex flex-wrap items-center text-white/70 text-sm font-medium gap-x-5 gap-y-1 mb-5 select-none">
-              <span><span className="text-white/60">Host</span> {featuredEvents[currentSlide].speaker}</span>
-              <span className="hidden sm:inline text-white/40">·</span>
-              <span><span className="text-white/60">Venue</span> {featuredEvents[currentSlide].venue}</span>
-              <span className="hidden sm:inline text-white/40">·</span>
-              <span><span className="text-white/60">Date</span> {featuredEvents[currentSlide].date} · {featuredEvents[currentSlide].time}</span>
-            </div>
-            
-            <button 
-              onClick={() => onSelectEvent && onSelectEvent(featuredEvents[currentSlide])}
-              className="px-6 py-3 bg-amber-400 hover:bg-amber-300 text-[#0b2c6a] text-sm font-bold tracking-[0.3px] rounded-lg shadow transition-all active:scale-[0.985] cursor-pointer"
-            >
-              {(featuredEvents[currentSlide].isPast || getEventStatusLabel(featuredEvents[currentSlide]) === 'Completed') ? 'View Details' : 'Register Now →'}
-            </button>
-          </div>
-
-          {/* Symmetrical Vector Left/Right Arrows */}
+        <div className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10 lg:px-16 text-left">
+          <h1 className="text-4xl sm:text-5xl md:text-[64px] font-bold text-white tracking-tight leading-[1.12] mb-10">
+            Cambodia Academy of<br />
+            Digital Technology,<br />
+            CADT
+          </h1>
+          
           <button 
-            onClick={prevSlide}
-            className="absolute left-4 z-20 bg-slate-900/60 hover:bg-white hover:text-slate-950 text-white w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-sm transition-all opacity-0 group-hover:opacity-100 cursor-pointer select-none shadow-md"
+            className="px-10 py-4 bg-gradient-to-r from-[#00a651] to-[#008f45] hover:from-[#008f45] hover:to-[#007a3b] text-white text-[15px] font-bold uppercase tracking-[0.05em] rounded-none shadow-lg transition-all cursor-pointer"
           >
-            <ChevronLeft className="w-4 h-4" />
+            VIEW EVENT
           </button>
-          <button 
-            onClick={nextSlide}
-            className="absolute right-4 z-20 bg-slate-900/60 hover:bg-white hover:text-slate-950 text-white w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-sm transition-all opacity-0 group-hover:opacity-100 cursor-pointer select-none shadow-md"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-
-          {/* Pagination Indicators */}
-          <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center gap-2 select-none">
-            {featuredEvents.map((_, index) => (
-              <span 
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                  currentSlide === index ? 'w-5 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'
-                }`}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* =======================================================================
           SORTING CONTROL DECK SECTION (Vector Inputs Update)

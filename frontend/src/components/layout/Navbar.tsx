@@ -4,18 +4,14 @@ import Logo from '../../assets/images/CADT10-LOGO-anniversary-03.png';
 import { useUrlSearch } from '../../hooks/useUrlSearch';
 
 interface NavbarProps {
-  activeTab: 'Discover' | 'My Booking' | 'Calendar' | 'About';
-  setActiveTab: (tab: 'Discover' | 'My Booking' | 'Calendar' | 'About') => void;
-  onNotificationClick?: () => void;
-  onFavoritesClick?: () => void;
+  activeTab: 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites';
+  setActiveTab: (tab: 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites') => void;
   onProfileClick?: () => void; // Kept for compatibility but we'll use Clerk UserButton
 }
 
 export default function Navbar({
   activeTab,
   setActiveTab,
-  onNotificationClick,
-  onFavoritesClick,
 }: NavbarProps) {
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -29,47 +25,46 @@ export default function Navbar({
   };
 
   return (
-    <header className="w-full bg-[#0a2540] border-b border-[#0b2c6a]/60 sticky top-0 z-50 backdrop-blur-md shadow-md">
-      <div className="w-full px-4 sm:px-8 lg:px-12 h-16 flex items-center">
+    <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+      <div className="w-full px-6 sm:px-10 lg:px-16 h-20 flex items-center">
         
         {/* =======================================================================
-            SECTION 1: BRAND LOGO (Left Column - Snapped strictly left)
+            SECTION 1: BRAND LOGO (Left Column)
            ======================================================================= */}
         <div className="flex-1 flex items-center justify-start">
           <div 
             onClick={() => handleTabSelect('Discover')}
-            className="flex items-center gap-2.5 cursor-pointer select-none group shrink-0"
+            className="flex items-center gap-3 cursor-pointer select-none group shrink-0"
           >
-            {/* Logo badge - sized for the new anniversary logo */}
-            <div className="h-8 flex items-center justify-center bg-white px-1.5 py-0.5 rounded-xl border border-slate-700/50 shadow-md transition-all duration-200 group-hover:scale-110 overflow-hidden shrink-0">
+            {/* Logo image clean display */}
+            <div className="h-10 sm:h-12 flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shrink-0">
               <img src={Logo} alt="CADT Logo" className="h-full w-auto object-contain" />
             </div>
 
-            <span className="text-[15px] font-black text-white tracking-tight group-hover:text-[#f59e0b] transition-colors duration-150">
-              CADT Event
+            <span className="hidden sm:block text-[17px] font-black text-[#112a46] tracking-tight group-hover:text-blue-600 transition-colors duration-150 uppercase">
+              CADT EVENT
             </span>
           </div>
         </div>
 
         {/* =======================================================================
-            SECTION 2: CENTER NAVIGATION (Middle Column - Balanced dead center)
+            SECTION 2: CENTER NAVIGATION
            ======================================================================= */}
         <div className="hidden md:flex flex-initial items-center justify-center h-full">
-          <nav className="flex items-center gap-8 h-full text-[14px] font-medium text-slate-400">
+          <nav className="flex items-center gap-8 lg:gap-10 h-full">
             {navItems.map((item) => {
               const isActive = activeTab === item;
               return (
                 <button
                   key={item}
                   onClick={() => handleTabSelect(item)}
-                  className={`h-full px-1 relative transition-all duration-200 flex items-center justify-center tracking-normal cursor-pointer select-none ${
-                    isActive ? 'text-white font-bold' : 'hover:text-white text-slate-400 font-medium'
+                  className={`h-full relative transition-all duration-200 flex items-center justify-center cursor-pointer select-none uppercase tracking-wider text-[13px] ${
+                    isActive 
+                      ? 'text-[#112a46] font-bold' 
+                      : 'text-gray-500 font-medium hover:text-[#112a46]'
                   }`}
                 >
                   {item}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white rounded-t-full animate-fade-in" />
-                  )}
                 </button>
               );
             })}
@@ -77,14 +72,14 @@ export default function Navbar({
         </div>
 
         {/* =======================================================================
-            SECTION 3: ACTIONS & AVATAR (Right Column - Snapped strictly right)
+            SECTION 3: ACTIONS & AVATAR
            ======================================================================= */}
         <div className="flex-1 flex items-center justify-end gap-3 sm:gap-5">
           
-          {/* Search Bar — hidden on Discover (use the main filter bar search per DESIGN.md) */}
-          {activeTab !== 'Discover' && (
+          {/* Search Bar / Icon */}
+          {activeTab !== 'Discover' ? (
             <div className="hidden md:flex items-center relative group">
-              <svg className="absolute left-3 w-4 h-4 text-slate-400 group-focus-within:text-[#f59e0b] transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <svg className="absolute left-3 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
               <input 
@@ -95,43 +90,57 @@ export default function Navbar({
                   setActiveTab('Discover');
                 }}
                 placeholder="Search events..." 
-                className="bg-[#0f172a]/60 border border-white/10 text-[13px] rounded-full pl-9 pr-4 py-1.5 text-white placeholder-white/50 focus:outline-none focus:ring-1 focus:ring-[#f59e0b]/60 focus:border-[#f59e0b]/50 focus:bg-[#0a2540] transition-all w-48 lg:w-64 shadow-inner"
+                className="bg-gray-50 border border-gray-200 text-[13px] rounded-full pl-9 pr-4 py-1.5 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all w-48 lg:w-64"
               />
             </div>
+          ) : (
+            <button
+              onClick={() => {}}
+              className="hidden md:flex text-blue-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors cursor-pointer"
+              aria-label="Search"
+            >
+              <svg className="w-[20px] h-[20px]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </button>
           )}
 
           {/* Notifications Icon Trigger */}
           <button 
-            onClick={onNotificationClick}
-            className="text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors relative cursor-pointer"
+            onClick={() => setActiveTab('Notifications')}
+            className={`text-gray-400 p-2 rounded-full transition-colors relative cursor-pointer ${
+              activeTab === 'Notifications' ? 'text-[#112a46] bg-gray-100' : 'hover:text-[#112a46] hover:bg-gray-100'
+            }`}
             aria-label="System Notifications"
           >
-            <svg className="w-[21px] h-[21px]" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+            <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
             </svg>
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[#f59e0b] rounded-full ring-2 ring-[#0a2540]" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
           </button>
 
-          {/* Saved Favorites Trigger */}
+          {/* Favorites Icon */}
           <button 
-            onClick={onFavoritesClick}
-            className="text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label="My Saved Favorites"
+            onClick={() => setActiveTab('Favorites')}
+            className={`p-2 rounded-full transition-colors relative cursor-pointer ${
+              activeTab === 'Favorites' ? 'text-red-500 bg-gray-100' : 'text-gray-400 hover:text-red-500 hover:bg-gray-100'
+            }`}
+            aria-label="Favorites"
           >
-            <svg className="w-[21px] h-[21px]" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+            <svg className="w-[22px] h-[22px]" fill={activeTab === 'Favorites' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
           </button>
 
           {/* Profile Avatar via Clerk UserButton */}
-          <div className="flex items-center justify-center hover:scale-105 transition-transform duration-150">
-            <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: 'w-8 h-8 border border-slate-700 shadow-inner rounded-full bg-slate-800' } }} />
+          <div className="flex items-center justify-center hover:scale-105 transition-transform duration-150 pl-1">
+            <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: 'w-9 h-9 border border-gray-200 shadow-sm rounded-full bg-gray-100' } }} />
           </div>
 
           {/* Mobile Hamburg Drawer Option Selector Menu Trigger */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            className="md:hidden text-gray-500 hover:text-[#112a46] p-1.5 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer ml-1"
             aria-label="Toggle Navigation Options Menu"
           >
             {isMobileMenuOpen ? (
@@ -150,7 +159,7 @@ export default function Navbar({
 
       {/* Mobile Drawer Dropdown Panel Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-[#0a2540] border-b border-[#0b2c6a]/40 absolute top-16 left-0 right-0 shadow-xl z-40 animate-fade-in">
+        <div className="md:hidden bg-white border-b border-gray-200 absolute top-20 left-0 right-0 shadow-lg z-40 animate-fade-in">
           <nav className="flex flex-col p-4 space-y-1">
             {navItems.map((item) => {
               const isActive = activeTab === item;
@@ -158,10 +167,10 @@ export default function Navbar({
                 <button
                   key={item}
                   onClick={() => handleTabSelect(item)}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer uppercase tracking-wide ${
                     isActive 
-                      ? 'bg-white text-[#0a2540] shadow-md' 
-                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                      ? 'bg-gray-50 text-[#112a46]' 
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-[#112a46]'
                   }`}
                 >
                   {item}

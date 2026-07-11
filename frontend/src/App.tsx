@@ -14,6 +14,8 @@ import BookingConfirmed from './features/events/pages/BookingConfirmed';
 import MyBooking from './features/events/pages/MyBooking';
 import About from './features/events/pages/About';
 import CalendarView from './features/calendar/CalendarView';
+import NotificationView from './features/notifications/NotificationView';
+import FavoritesView from './features/favorites/FavoritesView';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import TelegramConnectPrompt from './components/TelegramConnectPrompt';
@@ -24,7 +26,7 @@ import { toAcademicEvent } from './lib/eventMapper';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'Discover' | 'My Booking' | 'Calendar' | 'About';
+type Tab = 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Notifications';
 
 interface BookingInfo {
   event: AcademicEvent;
@@ -276,6 +278,13 @@ function AuthenticatedApp() {
           <CalendarView 
             onSelectEvent={selectEvent}
             onGoHome={() => setActiveTab('Discover')}
+          />
+        ) : activeTab === 'Notifications' ? (
+          <NotificationView />
+        ) : activeTab === 'Favorites' ? (
+          <FavoritesView 
+            onSelectEvent={selectEvent}
+            onExploreEventsClick={() => setActiveTab('Discover')}
           />
         ) : (
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center flex-grow flex flex-col items-center justify-center">

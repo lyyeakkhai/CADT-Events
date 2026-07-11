@@ -153,15 +153,19 @@ export default function EventDetailView() {
   }
 
   const toggleCheckIn = async (bookingId: string) => {
-    const originalBookings = [...bookings];
-    setBookings(bookings.map(b => b.id === bookingId ? { ...b, checkedInAt: b.checkedInAt ? null : new Date().toISOString() } : b));
+    // Optimistic update using functional state update
+    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, checkedInAt: b.checkedInAt ? null : new Date().toISOString() } : b));
     
     try {
       const res = await apiClient.patch(`/bookings/${bookingId}/checkin`);
-      setBookings(bookings.map(b => b.id === bookingId ? { ...b, checkedInAt: res.data.data.checkedInAt } : b));
+      // Update with actual server timestamp using functional state update
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, checkedInAt: res.data.data.checkedInAt } : b));
     } catch (e) {
       console.error('Failed to toggle check-in', e);
-      setBookings(originalBookings);
+      // Revert optimistic update
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, checkedInAt: b.checkedInAt ? null : b.checkedInAt } : b));
+      // Re-fetch to be safe if error occurs
+      fetchData();
     }
   };
 
