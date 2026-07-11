@@ -16,6 +16,8 @@ const viewTitles: Record<ViewType, string> = {
   export: 'Data Export',
   settings: 'Settings',
   notifications: 'Notifications',
+  users: 'User Management',
+  events: 'Event Details',
 };
 
 const viewBreadcrumb: Record<ViewType, string[]> = {
@@ -25,6 +27,8 @@ const viewBreadcrumb: Record<ViewType, string[]> = {
   export: ['Data', 'Export'],
   settings: ['Dashboard', 'Settings'],
   notifications: ['Dashboard', 'Notifications'],
+  users: ['Dashboard', 'Users'],
+  events: ['Dashboard', 'Events', 'Detail'],
 };
 
 export default function TopBar({ currentView, searchQuery, setSearchQuery, sidebarWidth }: TopBarProps) {

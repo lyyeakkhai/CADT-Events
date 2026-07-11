@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Search, MoreHorizontal, Shield, User, Filter, UserPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, MoreHorizontal, Shield, User, Filter, UserPlus, Loader2 } from 'lucide-react';
+import apiClient from '../lib/apiClient';
 
 interface UserData {
   id: string;
@@ -12,21 +13,32 @@ interface UserData {
   joinDate: string;
 }
 
-const mockUsers: UserData[] = [
-  { id: '1', name: 'John Doe', email: 'john.doe@example.com', eventsJoined: 12, totalCredits: 45, role: 'user', joinDate: '2023-01-15' },
-  { id: '2', name: 'Jane Smith', email: 'jane.smith@example.com', eventsJoined: 8, totalCredits: 30, role: 'user', joinDate: '2023-03-22' },
-  { id: '3', name: 'Admin User', email: 'admin@cadt.edu.kh', eventsJoined: 42, totalCredits: 150, role: 'admin', joinDate: '2022-11-01' },
-  { id: '4', name: 'Michael Chen', email: 'michael.chen@example.com', eventsJoined: 3, totalCredits: 10, role: 'user', joinDate: '2023-08-05' },
-  { id: '5', name: 'Sarah Jones', email: 'sarah.j@example.com', eventsJoined: 15, totalCredits: 60, role: 'user', joinDate: '2023-02-10' },
-  { id: '6', name: 'David Kim', email: 'david.k@example.com', eventsJoined: 1, totalCredits: 5, role: 'user', joinDate: '2023-09-12' },
-  { id: '7', name: 'Emily Davis', email: 'emily.d@example.com', eventsJoined: 5, totalCredits: 20, role: 'user', joinDate: '2023-05-18' },
-];
-
 export default function UsersView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredUsers = mockUsers
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await apiClient.get('/users');
+      setUsers(res.data.data);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setError('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const filteredUsers = users
     .filter(u => roleFilter === 'all' ? true : u.role === roleFilter)
     .filter(u => 
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -97,7 +109,22 @@ export default function UsersView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredUsers.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-slate-500">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+                      <p>Loading users...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-red-500">
+                    {error}
+                  </td>
+                </tr>
+              ) : filteredUsers.length > 0 ? (
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="p-4 pl-6">

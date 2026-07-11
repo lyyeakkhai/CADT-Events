@@ -16,7 +16,7 @@ import NotificationsView from './views/NotificationsView';
 import EventDetailView from './views/EventDetailView';
 import UsersView from './views/UsersView';
 
-export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create' | 'settings' | 'notifications' | 'users';
+export type ViewType = 'dashboard' | 'export' | 'calendar' | 'create' | 'settings' | 'notifications' | 'users' | 'events';
 
 const SIDEBAR_W = 240;
 const SIDEBAR_W_COLLAPSED = 64;

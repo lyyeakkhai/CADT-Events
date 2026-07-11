@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Calendar, MapPin, Ticket, GraduationCap, Users, FileText, Video, BarChart } from 'lucide-react';
 import type { AcademicEvent } from '../data/eventData';
 import { getEvent, type ApiEvent } from '../../../services/api';
 import { toAcademicEvent } from '../../../lib/eventMapper';
@@ -86,22 +87,22 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
             </h1>
             
             {/* Meta tags indicators strip (dynamic) */}
-            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-300">
-              <div className="flex items-center gap-1.5">
-                <span>📅</span>
-                <span>{displayEvent.date} · {displayEvent.time}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span>📍</span>
-                <span>{displayEvent.venue}</span>
-              </div>
-              {seatsLeft != null && (
+              <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-300">
                 <div className="flex items-center gap-1.5">
-                  <span>🎟️</span>
-                  <span>{seatsLeft} seats left</span>
+                  <Calendar className="w-4 h-4" />
+                  <span>{displayEvent.date} · {displayEvent.time}</span>
                 </div>
-              )}
-            </div>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" />
+                  <span>{displayEvent.venue}</span>
+                </div>
+                {seatsLeft != null && (
+                  <div className="flex items-center gap-1.5">
+                    <Ticket className="w-4 h-4" />
+                    <span>{seatsLeft} seats left</span>
+                  </div>
+                )}
+              </div>
           </div>
 
           {/* Right Presentation Speaker Layer Feature Accent */}
@@ -119,7 +120,7 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
       {past && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
           <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold rounded-xl px-4 py-2 flex items-center gap-2">
-            <span>📅</span>
+            <Calendar className="w-4 h-4" />
             <span>This event has ended — status: {statusLabel}</span>
           </div>
         </div>
@@ -143,7 +144,7 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
             {/* Quick Informational Grid Perks Tiles */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex gap-3 items-start">
-                <span className="text-lg p-1.5 bg-blue-50 text-blue-900 rounded-lg">🎓</span>
+                <span className="p-1.5 bg-blue-50 text-blue-900 rounded-lg"><GraduationCap className="w-5 h-5" /></span>
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 mb-0.5">Academic Focus</h4>
                   <p className="text-[11px] font-medium text-slate-400 leading-normal">Deep dives into core research papers and digital pedagogical innovations.</p>
@@ -151,7 +152,7 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
               </div>
 
               <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex gap-3 items-start">
-                <span className="text-lg p-1.5 bg-indigo-50 text-indigo-900 rounded-lg">🤝</span>
+                <span className="p-1.5 bg-indigo-50 text-indigo-900 rounded-lg"><Users className="w-5 h-5" /></span>
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 mb-0.5">Networking Opportunities</h4>
                   <p className="text-[11px] font-medium text-slate-400 leading-normal">Connect directly with over 500 tech professionals and verified academic mentors.</p>
@@ -297,13 +298,13 @@ export default function EventDetails({ event, onBackClick, onRegisterClick }: Ev
             <h4 className="text-xs font-black text-slate-900 mb-3 uppercase tracking-wider">Resource Center</h4>
             <ul className="space-y-2.5 text-xs font-bold text-slate-500">
               <li className="flex items-center gap-2 hover:text-blue-900 cursor-pointer transition-colors">
-                <span>📄</span> <span className="underline">Summit_Handbook.pdf</span>
+                <FileText className="w-4 h-4" /> <span className="underline">Summit_Handbook.pdf</span>
               </li>
               <li className="flex items-center gap-2 hover:text-blue-900 cursor-pointer transition-colors">
-                <span>🎥</span> <span className="underline">Live Stream Access Link</span>
+                <Video className="w-4 h-4" /> <span className="underline">Live Stream Access Link</span>
               </li>
               <li className="flex items-center gap-2 hover:text-blue-900 cursor-pointer transition-colors">
-                <span>📊</span> <span className="underline">Speaker Presentations Folder</span>
+                <BarChart className="w-4 h-4" /> <span className="underline">Speaker Presentations Folder</span>
               </li>
             </ul>
           </div>

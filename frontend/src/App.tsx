@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Wrench } from 'lucide-react';
 import { useUser, SignIn } from '@clerk/clerk-react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import './index.css';
@@ -16,6 +17,7 @@ import About from './features/events/pages/About';
 import CalendarView from './features/calendar/CalendarView';
 import NotificationView from './features/notifications/NotificationView';
 import FavoritesView from './features/favorites/FavoritesView';
+import SearchEventsView from './features/events/pages/SearchEventsView';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import TelegramConnectPrompt from './components/TelegramConnectPrompt';
@@ -26,7 +28,7 @@ import { toAcademicEvent } from './lib/eventMapper';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Notifications';
+type Tab = 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites';
 
 interface BookingInfo {
   event: AcademicEvent;
@@ -247,29 +249,32 @@ function AuthenticatedApp() {
 
       {/* Page content */}
       <div className="flex-grow w-full flex flex-col">
-        {activeTab === 'Discover' ? (
-          seatSelectionEvent ? (
-            <SeatSelection
-              event={seatSelectionEvent}
-              onBackClick={() => setSeatSelectionEvent(null)}
-              onRegisterClick={(event, seat, bookingId) => {
-                setBookingInfo({ event, seat, bookingId });
-                setSeatSelectionEvent(null);
-                setSelectedEvent(null);
-              }}
-            />
-          ) : selectedEvent ? (
-            <EventDetails
-              event={selectedEvent}
-              onBackClick={() => setSelectedEvent(null)}
-              onRegisterClick={(event) => setSeatSelectionEvent(event)}
-            />
-          ) : (
-            <DiscoveryFeed
-              onSelectEvent={selectEvent}
-              onViewCalendarClick={() => setActiveTab('Calendar')}
-            />
-          )
+        {seatSelectionEvent ? (
+          <SeatSelection
+            event={seatSelectionEvent}
+            onBackClick={() => setSeatSelectionEvent(null)}
+            onRegisterClick={(event, seat, bookingId) => {
+              setBookingInfo({ event, seat, bookingId });
+              setSeatSelectionEvent(null);
+              setSelectedEvent(null);
+            }}
+          />
+        ) : selectedEvent ? (
+          <EventDetails
+            event={selectedEvent}
+            onBackClick={() => setSelectedEvent(null)}
+            onRegisterClick={(event) => setSeatSelectionEvent(event)}
+          />
+        ) : activeTab === 'Discover' ? (
+          <DiscoveryFeed
+            onSelectEvent={selectEvent}
+            onViewCalendarClick={() => setActiveTab('Calendar')}
+            onExploreAllClick={() => setActiveTab('Search')}
+          />
+        ) : activeTab === 'Search' ? (
+          <SearchEventsView 
+            onSelectEvent={selectEvent}
+          />
         ) : activeTab === 'My Booking' ? (
           <MyBooking />
         ) : activeTab === 'About' ? (
@@ -288,7 +293,7 @@ function AuthenticatedApp() {
           />
         ) : (
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center flex-grow flex flex-col items-center justify-center">
-            <span className="text-3xl block mb-2">🛠️</span>
+            <Wrench className="w-8 h-8 text-slate-400 mb-3" />
             <h2 className="text-xl font-black text-slate-900 mb-1">{activeTab} View</h2>
             <p className="text-xs font-semibold text-slate-400 max-w-xs mx-auto leading-relaxed">
               This section is under construction.

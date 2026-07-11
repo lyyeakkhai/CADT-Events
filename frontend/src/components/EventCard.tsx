@@ -1,4 +1,5 @@
 import React from 'react';
+import { MapPin } from 'lucide-react';
 import type { AcademicEvent } from '../features/events/data/eventData';
 import { getEventStatusLabel, isEventPast } from '../lib/utils';
 
@@ -13,7 +14,10 @@ export default function EventCard({ event, onSelect }: EventCardProps) {
   const isCompleted = past || statusLabel === 'Completed';
 
   return (
-    <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm transition-all duration-200 flex flex-col justify-between group ${isCompleted ? 'border-slate-200 opacity-90' : 'border-slate-200 hover:shadow-md hover:border-slate-300'}`}>
+    <div 
+      onClick={() => onSelect(event)}
+      className={`bg-white rounded-2xl border overflow-hidden shadow-sm transition-all duration-200 flex flex-col justify-between group cursor-pointer ${isCompleted ? 'border-slate-200 opacity-90' : 'border-slate-200 hover:shadow-md hover:border-slate-300'}`}
+    >
       <div>
         {/* Card Image — cleaner treatment */}
         <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
@@ -57,7 +61,10 @@ export default function EventCard({ event, onSelect }: EventCardProps) {
       {/* Action Tray */}
       <div className="px-5 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs">
-          <span className="font-medium text-slate-500 truncate max-w-[110px]">📍 {event.venue}</span>
+          <span className="font-medium text-slate-500 truncate max-w-[110px] flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5" />
+            {event.venue}
+          </span>
           {event.seatsLeft !== undefined && !isCompleted && (
             <span className="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-100">
               {event.seatsLeft} left

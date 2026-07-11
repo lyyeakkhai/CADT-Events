@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserButton } from '@clerk/clerk-react';
 import Logo from '../../assets/images/CADT10-LOGO-anniversary-03.png';
 import { useUrlSearch } from '../../hooks/useUrlSearch';
 
 interface NavbarProps {
-  activeTab: 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites';
-  setActiveTab: (tab: 'Discover' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites') => void;
+  activeTab: 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites';
+  setActiveTab: (tab: 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites') => void;
   onProfileClick?: () => void; // Kept for compatibility but we'll use Clerk UserButton
 }
 
@@ -17,11 +17,17 @@ export default function Navbar({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useUrlSearch('q');
   
-  const navItems = ['Discover', 'My Booking', 'Calendar', 'About'] as const;
+  const navItems = ['Discover', 'Search', 'My Booking', 'Calendar', 'About'] as const;
 
-  const handleTabSelect = (item: 'Discover' | 'My Booking' | 'Calendar' | 'About') => {
-    setActiveTab(item);
-    setIsMobileMenuOpen(false); 
+  // Sync internal state with props if parent changes it
+  useEffect(() => {
+    // We do not overwrite search query from external activeTab changes,
+    // we just let them switch tabs.
+  }, [activeTab]);
+
+  const handleTabSelect = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -54,6 +60,7 @@ export default function Navbar({
           <nav className="flex items-center gap-8 lg:gap-10 h-full">
             {navItems.map((item) => {
               const isActive = activeTab === item;
+              const displayText = item === 'Search' ? 'Explore' : item;
               return (
                 <button
                   key={item}
@@ -64,7 +71,7 @@ export default function Navbar({
                       : 'text-gray-500 font-medium hover:text-[#112a46]'
                   }`}
                 >
-                  {item}
+                  {displayText}
                 </button>
               );
             })}
@@ -77,33 +84,29 @@ export default function Navbar({
         <div className="flex-1 flex items-center justify-end gap-3 sm:gap-5">
           
           {/* Search Bar / Icon */}
-          {activeTab !== 'Discover' ? (
-            <div className="hidden md:flex items-center relative group">
-              <svg className="absolute left-3 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
+          <div className="hidden md:flex items-center relative group">
+            <div className="relative flex items-center h-[36px] overflow-hidden bg-transparent rounded-full group-hover:bg-gray-50 group-hover:border group-hover:border-gray-200 transition-all duration-300 w-9 group-hover:w-48 lg:group-hover:w-64 group-focus-within:w-48 lg:group-focus-within:w-64 group-focus-within:border-blue-500 group-focus-within:bg-white group-focus-within:border">
+              <div className="absolute left-0 top-0 bottom-0 flex items-center justify-center w-9 h-full shrink-0 text-gray-400 group-hover:text-blue-500 group-focus-within:text-blue-500 z-10 pointer-events-none">
+                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
               <input 
                 type="text" 
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setActiveTab('Discover');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setActiveTab('Search');
+                  }
                 }}
                 placeholder="Search events..." 
-                className="bg-gray-50 border border-gray-200 text-[13px] rounded-full pl-9 pr-4 py-1.5 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all w-48 lg:w-64"
+                className="absolute inset-0 bg-transparent text-[13px] rounded-full pl-9 pr-4 text-gray-700 placeholder-gray-400 focus:outline-none w-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto"
               />
             </div>
-          ) : (
-            <button
-              onClick={() => {}}
-              className="hidden md:flex text-blue-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors cursor-pointer"
-              aria-label="Search"
-            >
-              <svg className="w-[20px] h-[20px]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
-            </button>
-          )}
+          </div>
 
           {/* Notifications Icon Trigger */}
           <button 
@@ -163,6 +166,7 @@ export default function Navbar({
           <nav className="flex flex-col p-4 space-y-1">
             {navItems.map((item) => {
               const isActive = activeTab === item;
+              const displayText = item === 'Search' ? 'Explore' : item;
               return (
                 <button
                   key={item}
@@ -173,7 +177,7 @@ export default function Navbar({
                       : 'text-gray-500 hover:bg-gray-50 hover:text-[#112a46]'
                   }`}
                 >
-                  {item}
+                  {displayText}
                 </button>
               );
             })}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronDown, MoreHorizontal, AlertTriangle, BellOff } from 'lucide-react';
+import { Search, ChevronDown, MoreHorizontal, AlertTriangle, BellOff, Loader2 } from 'lucide-react';
+import apiClient from '../lib/apiClient';
 
 export interface Notification {
   id: string;
@@ -16,28 +17,19 @@ export default function NotificationsView() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'unread' | 'read'>('unread');
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch mock notifications
   useEffect(() => {
     const fetchNotifications = async () => {
       setLoading(true);
+      setError(null);
       try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const dummyData: Notification[] = [
-          { id: '1', title: 'Blocker Detected in Sprint Planning', message: 'Backend integration issues may delay the onboarding release.', read: false, timestamp: 'Just now', type: 'alert', severity: 'critical' },
-          { id: '2', title: 'Task Overdue', message: '"Finalize UI design for onboarding flow" is overdue.', read: false, timestamp: 'Today, 11:20 AM', type: 'alert', severity: 'critical' },
-          { id: '3', title: 'Timeline Risk Identified', message: 'AI detected potential delays in the current sprint timeline.', read: false, timestamp: '2 hours ago', type: 'alert', severity: 'critical' },
-          { id: '4', title: 'New Task Assigned', message: 'You\'ve been assigned: "Prepare client presentation deck."', read: false, timestamp: '1 hour ago', type: 'alert', severity: 'critical' },
-          { id: '5', title: 'Recurring Issue Detected', message: '"User onboarding confusion" has been discussed in multiple meetings.', read: false, timestamp: '20 minutes ago', type: 'alert', severity: 'critical' },
-          { id: '6', title: 'Upcoming Meeting', message: '"Weekly Product Sync" starts in 15 minutes.', read: false, timestamp: '2 days ago', type: 'alert', severity: 'critical' },
-          { id: '7', title: 'New Event Registration', message: 'John Doe registered for Tech Expo.', read: true, timestamp: '10 min ago', type: 'event', severity: 'info' },
-          { id: '8', title: 'System Update', message: 'Maintenance scheduled for tonight at 2 AM.', read: true, timestamp: '1 hour ago', type: 'system', severity: 'info' },
-        ];
-        
-        setNotifications(dummyData);
+        const res = await apiClient.get('/notifications/admin');
+        setNotifications(res.data.data);
       } catch (error) {
         console.error("Failed to fetch notifications", error);
+        setError("Failed to load notifications");
       } finally {
         setLoading(false);
       }
@@ -121,6 +113,13 @@ export default function NotificationsView() {
           <div className="flex flex-col items-center justify-center p-20">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
             <p className="text-slate-500 text-sm">Loading notifications...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center p-20 text-center">
+            <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mb-3">
+              <AlertTriangle size={24} className="text-red-500" />
+            </div>
+            <h3 className="text-base font-medium text-red-600 mb-1">{error}</h3>
           </div>
         ) : filteredNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-20 text-center">

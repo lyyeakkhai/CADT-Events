@@ -57,6 +57,9 @@ export function createApp() {
   const { favoriteRouter } = require("@/modules/favorites/favorites.routes");
   app.use("/api/favorites", favoriteRouter);
 
+  const { userRouter } = require("@/modules/users/users.routes");
+  app.use("/api/users", userRouter);
+
   // Upload routes (admin only) - use the same requireAuth + requireRole as other admin routes
   const { uploadRoutes } = require("@/modules/upload/upload.routes");
   const { requireAuth, requireRole } = require("@/common/middleware/auth.middleware");

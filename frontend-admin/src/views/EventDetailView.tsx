@@ -211,8 +211,24 @@ export default function EventDetailView() {
         }
       }
 
-      const payload = { ...editForm, coverImageUrl: finalCoverImageUrl, status };
-      await apiClient.patch(`/events/${id}`, payload);
+      const cleanPayload: Record<string, any> = {
+        title: editForm.title,
+        description: editForm.description,
+        startTimestamp: editForm.startTimestamp,
+        endTimestamp: editForm.endTimestamp,
+        location: editForm.location || '',
+        capacity: editForm.capacity || undefined,
+        eventType: editForm.eventType,
+        creditValue: editForm.creditValue,
+        isFeatured: editForm.isFeatured,
+        coverImageUrl: finalCoverImageUrl || '',
+        status
+      };
+
+      // Remove undefined fields so Zod doesn't complain about them if they're completely missing
+      Object.keys(cleanPayload).forEach(key => cleanPayload[key] === undefined && delete cleanPayload[key]);
+
+      await apiClient.patch(`/events/${id}`, cleanPayload);
 
       // Clear cached file after successful save
       setEditCoverImageFile(null);
@@ -352,11 +368,11 @@ export default function EventDetailView() {
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">Start Date & Time</label>
-              <input type="datetime-local" value={editForm.startTimestamp ? new Date(editForm.startTimestamp).toISOString().slice(0, 16) : ''} onChange={(e: any) => setEditForm({...editForm, startTimestamp: new Date(e.target.value).toISOString()})} className="w-full input-glow p-3 text-sm transition-all" />
+              <input type="datetime-local" value={editForm.startTimestamp ? (!isNaN(new Date(editForm.startTimestamp).getTime()) ? new Date(editForm.startTimestamp).toISOString().slice(0, 16) : '') : ''} onChange={(e: any) => { const d = new Date(e.target.value); setEditForm({...editForm, startTimestamp: !isNaN(d.getTime()) ? d.toISOString() : ''}) }} className="w-full input-glow p-3 text-sm transition-all" />
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">End Date & Time</label>
-              <input type="datetime-local" value={editForm.endTimestamp ? new Date(editForm.endTimestamp).toISOString().slice(0, 16) : ''} onChange={(e: any) => setEditForm({...editForm, endTimestamp: new Date(e.target.value).toISOString()})} className="w-full input-glow p-3 text-sm transition-all" />
+              <input type="datetime-local" value={editForm.endTimestamp ? (!isNaN(new Date(editForm.endTimestamp).getTime()) ? new Date(editForm.endTimestamp).toISOString().slice(0, 16) : '') : ''} onChange={(e: any) => { const d = new Date(e.target.value); setEditForm({...editForm, endTimestamp: !isNaN(d.getTime()) ? d.toISOString() : ''}) }} className="w-full input-glow p-3 text-sm transition-all" />
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">Location</label>

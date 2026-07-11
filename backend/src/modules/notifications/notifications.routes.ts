@@ -1,8 +1,11 @@
 import { Router } from "express";
-import { getMyNotifications, markAsRead } from "./notifications.controller";
-import { requireAuth } from "@/common/middleware/auth.middleware";
+import { getMyNotifications, markAsRead, getAdminNotifications } from "./notifications.controller";
+import { requireAuth, requireRole } from "@/common/middleware/auth.middleware";
 
 export const notificationRouter = Router();
+
+// GET /api/notifications/admin
+notificationRouter.get("/admin", requireAuth, requireRole('ADMIN'), getAdminNotifications);
 
 // GET /api/notifications/me
 notificationRouter.get("/me", requireAuth, getMyNotifications);

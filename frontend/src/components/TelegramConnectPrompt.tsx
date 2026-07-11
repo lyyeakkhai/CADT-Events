@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useUser } from '@clerk/clerk-react';
+import { CheckCircle } from 'lucide-react';
 import { useTelegramApi } from '../services/api';
 
 interface TelegramConnectPromptProps {
@@ -128,9 +129,10 @@ export default function TelegramConnectPrompt({ open, onClose, onConnected }: Te
         )}
 
         {connected && (
-          <div className="py-6 text-center">
-            <div className="text-2xl mb-2">✅</div>
-            <div className="font-bold">Connected! Check your Telegram for a confirmation message.</div>
+          <div className="flex flex-col items-center justify-center p-8 bg-green-50/50 rounded-2xl mb-4 text-center">
+            <CheckCircle className="w-12 h-12 text-green-500 mb-3" />
+            <h4 className="text-lg font-bold text-slate-900 mb-1">Successfully Connected</h4>
+            <div className="text-slate-600 text-sm">Check your Telegram for a confirmation message.</div>
           </div>
         )}
       </div>
