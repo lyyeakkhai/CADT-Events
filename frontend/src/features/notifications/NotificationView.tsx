@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNotificationsApi, type ApiNotification } from '../../services/api';
-import { Bell, Check, Loader2, CheckCircle2 } from 'lucide-react';
+import { Bell, Check, Loader2, CheckCircle2, Send } from 'lucide-react';
+import TelegramConnectPrompt from '../../components/TelegramConnectPrompt';
 
 export default function NotificationView() {
   const { getMyNotifications, markAsRead } = useNotificationsApi();
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showTelegramPrompt, setShowTelegramPrompt] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -46,7 +48,7 @@ export default function NotificationView() {
 
   if (loading) {
     return (
-      <div className="flex-grow w-full max-w-4xl mx-auto px-4 py-10 flex flex-col items-center justify-center min-h-[400px]">
+      <div className="flex-grow w-full max-w-7xl mx-auto px-4 py-10 flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 text-[#0b2c6a] animate-spin mb-4" />
         <p className="text-slate-500 font-medium">Loading notifications...</p>
       </div>
@@ -54,7 +56,7 @@ export default function NotificationView() {
   }
 
   return (
-    <div className="flex-grow w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in">
+    <div className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-fade-in">
       <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
         <div>
           <h2 className="text-2xl font-extrabold text-[#0b2c6a] flex items-center gap-2">
@@ -75,6 +77,24 @@ export default function NotificationView() {
             Mark all read
           </button>
         )}
+      </div>
+
+      <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#0b2c6a]">
+            <Send className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-900">Never miss an update</h4>
+            <p className="text-xs text-slate-500 mt-0.5">Receive instant booking confirmations and reminders on Telegram.</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setShowTelegramPrompt(true)}
+          className="text-xs font-bold text-white bg-[#0b2c6a] px-4 py-2 rounded-lg hover:bg-blue-900 transition-colors shadow-sm whitespace-nowrap"
+        >
+          Connect Telegram
+        </button>
       </div>
 
       {error ? (
@@ -143,6 +163,11 @@ export default function NotificationView() {
           ))}
         </div>
       )}
+
+      <TelegramConnectPrompt 
+        open={showTelegramPrompt} 
+        onClose={() => setShowTelegramPrompt(false)} 
+      />
     </div>
   );
 }

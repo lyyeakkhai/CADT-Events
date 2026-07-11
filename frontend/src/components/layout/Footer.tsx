@@ -15,15 +15,12 @@ export default function Footer({ onLinkClick }: FooterProps) {
   };
 
   return (
-    <footer className="w-full bg-[#0f172a] text-slate-400 py-10 mt-auto border-t border-[#0b2c6a]/30 text-sm font-medium selection:bg-slate-800">
+    <footer className="w-full bg-[#0b2c6a] text-blue-100/70 py-10 mt-auto border-t border-white/10 text-sm font-medium selection:bg-blue-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* Column 1: Brand */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-5 h-5 bg-white rounded-sm" />
-            <span className="text-white text-sm font-bold tracking-tight">CADT Events</span>
-          </div>
+
           <p className="text-slate-400 leading-relaxed max-w-[26ch] text-[13px]">
             Official platform for academic events at Cambodia Academy of Digital Technology.
           </p>

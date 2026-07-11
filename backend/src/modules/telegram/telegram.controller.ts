@@ -2,6 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import { getAuth } from '@clerk/express';
 import { bot, botUsername } from './telegram.service';
 import { NotFoundError } from '@/common/errors/app-error';
+import { prisma } from '@/lib/prisma';
+import { clerkClient } from '@clerk/express';
 
 export async function getConnectLink(req: Request, res: Response, next: NextFunction) {
   try {
@@ -40,16 +42,67 @@ export async function getConnectLink(req: Request, res: Response, next: NextFunc
   }
 }
 
-// Future: could add status endpoint or unsubscribe here.
+// Check if the user has connected their Telegram account
 export async function getTelegramStatus(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = (req as any).customAuth?.userId || getAuth(req).userId;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
-    // We could query here, but to avoid duplication the /me endpoint (when added) is preferred.
-    // For now this route exists for extensibility.
-    res.json({ success: true, data: { configured: !!bot } });
+    
+    let isConnected = false;
+    
+    // Check in database
+    const user = await prisma.userAccount.findUnique({
+      where: { user_id: userId },
+      select: { telegram_chat_id: true }
+    });
+    
+    if (user && user.telegram_chat_id) {
+      isConnected = true;
+    }
+
+    res.json({ 
+      success: true, 
+      data: { 
+        configured: !!bot,
+        isConnected 
+      } 
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Disconnect Telegram from the user's account
+export async function disconnectTelegram(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = (req as any).customAuth?.userId || getAuth(req).userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+
+    // Update Database
+    await prisma.userAccount.updateMany({
+      where: { user_id: userId },
+      data: { telegram_chat_id: null }
+    });
+
+    // Update Clerk Metadata
+    try {
+      await clerkClient.users.updateUserMetadata(userId, {
+        publicMetadata: {
+          telegram_chat_id: null
+        }
+      });
+    } catch (clerkErr) {
+      console.warn('Failed to update Clerk metadata during Telegram disconnect:', clerkErr);
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Telegram disconnected successfully' 
+    });
   } catch (err) {
     next(err);
   }

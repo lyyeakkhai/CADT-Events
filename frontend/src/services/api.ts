@@ -113,7 +113,7 @@ export function useEventsApi() {
   async function getMyBookings(): Promise<ApiBooking[]> {
     const token = await getToken();
     if (!token) throw new Error('Not authenticated');
-    const res = await authFetch<{ success: boolean; data: ApiBooking[] }>('/bookings/me', token);
+    const res = await authFetch<{ success: boolean; data: ApiBooking[] }>('/bookings/me', token, { cache: 'no-store' });
     return res.data;
   }
 

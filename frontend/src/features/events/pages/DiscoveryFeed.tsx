@@ -1,5 +1,5 @@
-import React, { useMemo, useEffect, useState } from 'react';
-import { Calendar, Loader2 } from 'lucide-react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
+import { Calendar, Loader2, ArrowRight } from 'lucide-react';
 import EventCard from '../../../components/EventCard';
 import type { AcademicEvent } from '../../../features/events/data/eventData';
 import { getEvents } from '../../../services/api';
@@ -15,6 +15,11 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick, onEx
   const [apiEvents, setApiEvents] = useState<AcademicEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const eventsSectionRef = useRef<HTMLElement>(null);
+  const scrollToEvents = () => {
+    eventsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   // Fetch from backend
   useEffect(() => {
@@ -47,6 +52,10 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick, onEx
 
   const featuredEvents = useMemo(() => {
     return allEvents.filter(event => event.isFeatured === true);
+  }, [allEvents]);
+
+  const upcomingEvents = useMemo(() => {
+    return allEvents.filter(event => event.isFeatured !== true);
   }, [allEvents]);
 
   if (loading) {
@@ -93,6 +102,7 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick, onEx
           </h1>
           
           <button 
+            onClick={scrollToEvents}
             className="px-10 py-4 bg-gradient-to-r from-[#00a651] to-[#008f45] hover:from-[#008f45] hover:to-[#007a3b] text-white text-[15px] font-bold uppercase tracking-[0.05em] rounded-none shadow-lg transition-all cursor-pointer"
           >
             VIEW EVENT
@@ -101,45 +111,72 @@ export default function DiscoveryFeed({ onSelectEvent, onViewCalendarClick, onEx
       </section>
 
       {/* =======================================================================
-          FEATURED EVENTS SECTION
+          EVENTS SECTION
          ======================================================================= */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full flex-grow">
+      <main ref={eventsSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full flex-grow">
         {error && (
           <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800 text-center">
             {error}
           </div>
         )}
 
-        <div className="mb-10 text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Featured & Popular Events</h2>
-          <p className="text-slate-500 mt-2 max-w-2xl mx-auto">Discover the most anticipated academic events, workshops, and seminars handpicked for the CADT community.</p>
-        </div>
-
-        {featuredEvents.length === 0 ? (
-          <div className="w-full text-center py-16 bg-white rounded-2xl border border-slate-200 px-6 max-w-xl mx-auto">
-             <p className="text-slate-500">More featured events coming soon.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {featuredEvents.slice(0, 3).map((event) => (
-              <EventCard 
-                key={event.id} 
-                event={event} 
-                onSelect={(ev) => onSelectEvent && onSelectEvent(ev)} 
-              />
-            ))}
+        {/* Featured Events */}
+        {featuredEvents.length > 0 && (
+          <div className="mb-20 animate-fade-in-up">
+            <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Featured Events</h2>
+                <p className="text-slate-500 mt-2 max-w-2xl">Discover the most anticipated academic events handpicked for the CADT community.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredEvents.slice(0, 3).map((event) => (
+                <div key={event.id} className="transition-all duration-300 hover:-translate-y-2">
+                  <EventCard 
+                    event={event} 
+                    onSelect={(ev) => onSelectEvent && onSelectEvent(ev)} 
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="flex justify-center mt-4">
+        {/* Upcoming/All Events */}
+        <div className="mb-16">
+          <div className="mb-10">
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Discover More</h2>
+            <p className="text-slate-500 mt-2 max-w-2xl">Browse all academic seminars, workshops, and gatherings.</p>
+          </div>
+          
+          {upcomingEvents.length === 0 ? (
+            <div className="w-full text-center py-16 bg-white rounded-2xl border border-slate-200 px-6 max-w-xl mx-auto">
+               <p className="text-slate-500">More events coming soon.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
+              {upcomingEvents.slice(0, 6).map((event) => (
+                <div key={event.id} className="transition-all duration-300 hover:-translate-y-2">
+                  <EventCard 
+                    event={event} 
+                    onSelect={(ev) => onSelectEvent && onSelectEvent(ev)} 
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-center mt-8 pb-10">
           <button
             onClick={onExploreAllClick}
-            className="px-8 py-4 bg-[#0b2c6a] hover:bg-[#082050] text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-2"
+            className="group px-8 py-4 bg-[#0b2c6a] hover:bg-[#082050] text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-3 overflow-hidden relative"
           >
-            Explore All Events
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-               <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
+            <span className="relative z-10 flex items-center gap-2">
+              Explore All Events
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </span>
+            <div className="absolute inset-0 bg-white/10 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
           </button>
         </div>
       </main>

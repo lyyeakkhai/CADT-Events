@@ -29,11 +29,14 @@ export default function EventCard({ event, onSelect }: EventCardProps) {
           <span className="absolute top-3 left-3 bg-white/95 text-[#0b2c6a] text-[10px] font-semibold tracking-[0.5px] px-2.5 py-0.5 rounded border border-white/60 shadow-sm">
             {event.badge}
           </span>
-          {isCompleted && (
-            <span className="absolute top-3 right-3 bg-slate-800/90 text-white text-[10px] font-black tracking-wider px-2 py-0.5 rounded">
-              {statusLabel}
-            </span>
-          )}
+          <span className={`absolute top-3 right-3 text-white text-[10px] font-black tracking-wider px-2.5 py-0.5 rounded shadow-sm ${
+            statusLabel === 'Upcoming' ? 'bg-emerald-500/90' :
+            statusLabel === 'Ongoing' ? 'bg-rose-500/90 animate-pulse' :
+            statusLabel === 'Cancelled' ? 'bg-red-800/90' :
+            'bg-slate-700/90'
+          }`}>
+            {statusLabel}
+          </span>
         </div>
 
         {/* Content — improved hierarchy + breathing room (per DESIGN.md) */}

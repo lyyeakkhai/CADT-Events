@@ -27,17 +27,22 @@ export const initTelegramBot = () => {
     }
 
     try {
+      console.log(`[Telegram Bot] Received /start with payload: "${userId}"`);
       // Check if user exists by clerk user_id
       let user = await prisma.userAccount.findFirst({
         where: { user_id: userId }
       });
 
+      console.log(`[Telegram Bot] User found in DB initially? ${!!user}`);
+
       // If user isn't in DB yet (e.g. local dev without webhooks), try fetching from Clerk and creating
       if (!user) {
         try {
+          console.log(`[Telegram Bot] Fetching from Clerk for user: ${userId}`);
           const clerkUser = await clerkClient.users.getUser(userId);
           const email = clerkUser.emailAddresses?.[0]?.emailAddress || `user-${userId}@cadt.edu.kh`;
           const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ').trim() || (email.split('@')[0] || 'CADT User');
+          console.log(`[Telegram Bot] Creating user in DB for ${email}...`);
           user = await prisma.userAccount.create({
             data: { 
               user_id: userId, 
@@ -47,8 +52,9 @@ export const initTelegramBot = () => {
               password_hash: 'managed-by-clerk'
             },
           });
+          console.log(`[Telegram Bot] Successfully created user in DB.`);
         } catch (err) {
-          console.error('Failed to create user during telegram link:', err);
+          console.error('[Telegram Bot] Failed to create user during telegram link. Error:', err);
         }
       }
 

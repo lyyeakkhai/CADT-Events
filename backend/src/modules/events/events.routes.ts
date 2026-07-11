@@ -9,6 +9,7 @@ import {
   createEvent,
   updateEvent,
   deleteEvent,
+  getEventSeats,
 } from './events.controller';
 
 const router = Router();
@@ -22,6 +23,9 @@ router.get('/all', requireAuth, requireRole('ADMIN'), listAllEvents);
 
 // GET /api/events/:id       — get single event
 router.get('/:id', getEvent);
+
+// GET /api/events/:id/seats — get occupied seats for an event
+router.get('/:id/seats', requireAuth, getEventSeats);
 
 // ── Admin ────────────────────────────────────────────────────────────────────
 // POST /api/events          — create event

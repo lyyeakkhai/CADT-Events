@@ -11,7 +11,7 @@ export async function createBooking(req: Request, res: Response, next: NextFunct
     const userId = (req as any).customAuth?.userId || getAuth(req).userId;
     if (!userId) throw new BadRequestError('User not authenticated');
     
-    const { eventId } = req.body as CreateBookingInput;
+    const { eventId, seatLabel, answers } = req.body as CreateBookingInput;
 
     let user = await prisma.userAccount.findUnique({ where: { user_id: userId } });
     if (!user) {
@@ -36,8 +36,18 @@ export async function createBooking(req: Request, res: Response, next: NextFunct
     const booking = await prisma.$transaction(async (tx) => {
       const event = await tx.event.findFirst({
         where: { event_id: eventId, deleted_at: null, status: 'published' },
+        include: { questions: true }
       });
       if (!event) throw new NotFoundError('Event not found or not available for booking');
+
+      // Check required questions
+      if (event.questions && event.questions.length > 0) {
+        for (const q of event.questions) {
+          if (q.is_required && (!answers || !answers[q.question_id])) {
+            throw new BadRequestError(`Question "${q.question_text}" is required`);
+          }
+        }
+      }
 
       // count registrations
       const confirmedCount = await tx.registration.count({
@@ -53,6 +63,14 @@ export async function createBooking(req: Request, res: Response, next: NextFunct
       });
       if (existing) throw new ConflictError('You have already booked this event');
 
+      // Check if seat is available
+      if (seatLabel) {
+        const existingSeat = await tx.registration.findFirst({
+          where: { event_id: eventId, deleted_at: null, seat_label: seatLabel }
+        });
+        if (existingSeat) throw new ConflictError(`Seat ${seatLabel} is already taken`);
+      }
+
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const rand = Math.random().toString(16).slice(2, 6).toUpperCase();
       const bookingReferenceId = `CADT-${dateStr}-${rand}`;
@@ -65,6 +83,7 @@ export async function createBooking(req: Request, res: Response, next: NextFunct
           booking_reference: bookingReferenceId,
           user_id: user!.user_id,
           event_id: eventId,
+          seat_label: seatLabel || null,
         },
         include: {
           event: {
@@ -82,6 +101,17 @@ export async function createBooking(req: Request, res: Response, next: NextFunct
           },
         },
       });
+
+      // Save dynamic form answers
+      if (answers && Object.keys(answers).length > 0) {
+        const answerData = Object.entries(answers).map(([question_id, answer_value]) => ({
+          answer_id: require('crypto').randomUUID(),
+          registration_id: uuid,
+          question_id,
+          answer_value: String(answer_value)
+        }));
+        await tx.registrationAnswer.createMany({ data: answerData });
+      }
 
       // map to frontend shape
       return {

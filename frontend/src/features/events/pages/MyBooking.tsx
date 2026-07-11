@@ -61,8 +61,8 @@ export default function MyBooking() {
 
           {/* Next Event Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-slate-900">Next Event</h2>
-            <span className="bg-amber-400 text-slate-950 text-[11px] font-black tracking-wider uppercase px-3 py-1.5 rounded-lg shadow-xs select-none">
+            <h2 className="text-lg font-black text-[#0b2c6a]">Next Event</h2>
+            <span className="bg-amber-400 text-[#0b2c6a] text-[11px] font-black tracking-wider uppercase px-3 py-1.5 rounded-lg shadow-xs select-none">
               Confirmed
             </span>
           </div>
@@ -73,14 +73,14 @@ export default function MyBooking() {
             <div className="flex flex-col md:flex-row">
 
               {/* Hero Image */}
-              <div className="relative w-full md:w-[420px] h-[260px] md:h-auto shrink-0 bg-slate-900">
+              <div className="relative w-full md:w-[420px] h-[260px] md:h-auto shrink-0 bg-[#0b2c6a]">
                 <img
                   src={upcomingBookings[0].event.coverImageUrl || drone}
                   alt={upcomingBookings[0].event.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-luminosity"
                   onError={(e: any) => { e.target.src = drone; }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b2c6a]/90 via-[#0b2c6a]/20 to-transparent" />
                 <div className="relative z-10 h-full flex flex-col justify-end p-6">
                   <span className="text-[11px] font-black tracking-widest uppercase text-white/80 mb-1">
                     Confirmed
@@ -145,7 +145,7 @@ export default function MyBooking() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Booking ID</p>
-                      <p className="text-sm font-extrabold text-slate-900">{upcomingBookings[0].bookingReferenceId}</p>
+                      <p className="text-sm font-extrabold text-[#0b2c6a]">{upcomingBookings[0].bookingReferenceId}</p>
                     </div>
                   </div>
                 </div>
@@ -159,13 +159,29 @@ export default function MyBooking() {
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-3 mt-auto">
-                  <button className="inline-flex items-center gap-2 bg-slate-950 hover:bg-blue-900 text-white font-extrabold text-xs px-5 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-150 cursor-pointer active:scale-[0.98]">
+                  <button className="inline-flex items-center gap-2 bg-[#0b2c6a] hover:bg-[#082050] text-white font-extrabold text-xs px-5 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-150 cursor-pointer active:scale-[0.98]">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                     </svg>
                     Modify Booking
                   </button>
-                  <button onClick={() => handleCancel(upcomingBookings[0].id)} className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 font-extrabold text-xs px-5 py-3 rounded-xl transition-colors cursor-pointer">
+                  <button 
+                    onClick={() => {
+                      const blob = new Blob([`TICKET DATA\nEvent: ${upcomingBookings[0].event.title}\nBooking Ref: ${upcomingBookings[0].bookingReferenceId}\nDate: ${upcomingBookings[0].createdAt}`], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `Ticket_${upcomingBookings[0].bookingReferenceId}.txt`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-3 rounded-xl shadow-sm hover:shadow transition-all duration-150 cursor-pointer active:scale-[0.98]" aria-label="Download Ticket">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5 7.5 12M12 3v13.5" />
+                    </svg>
+                    Download Ticket
+                  </button>
+                  <button onClick={() => handleCancel(upcomingBookings[0].id)} className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-slate-300 text-[#0b2c6a] font-extrabold text-xs px-5 py-3 rounded-xl transition-colors cursor-pointer">
                     Cancel
                   </button>
                 </div>
@@ -237,7 +253,7 @@ export default function MyBooking() {
             <h3 className="text-sm font-black text-slate-900 mb-1">Your Activity</h3>
 
             <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl p-3.5">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0b2c6a] text-white flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="m9 13.5 1.5 1.5 3-3.5" />
@@ -250,7 +266,7 @@ export default function MyBooking() {
             </div>
 
             <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl p-3.5">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0b2c6a] text-white flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3M3.75 18h16.5a1.5 1.5 0 0 0 1.5-1.5V7.5a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 7.5v9a1.5 1.5 0 0 0 1.5 1.5Z" />
                 </svg>
@@ -262,7 +278,7 @@ export default function MyBooking() {
             </div>
 
             <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl p-3.5">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0b2c6a] text-white flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
                 </svg>

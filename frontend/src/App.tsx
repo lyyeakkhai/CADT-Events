@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wrench } from 'lucide-react';
 import { useUser, SignIn } from '@clerk/clerk-react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './index.css';
 
 import Navbar from './components/layout/Navbar';
@@ -13,7 +13,7 @@ import EventDetails from './features/events/pages/EventDetail';
 import SeatSelection from './features/events/pages/SeatSelection';
 import BookingConfirmed from './features/events/pages/BookingConfirmed';
 import MyBooking from './features/events/pages/MyBooking';
-import About from './features/events/pages/About';
+
 import CalendarView from './features/calendar/CalendarView';
 import NotificationView from './features/notifications/NotificationView';
 import FavoritesView from './features/favorites/FavoritesView';
@@ -28,7 +28,7 @@ import { toAcademicEvent } from './lib/eventMapper';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites';
+type Tab = 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'Notifications' | 'Favorites';
 
 interface BookingInfo {
   event: AcademicEvent;
@@ -149,10 +149,11 @@ function LoginView() {
   );
 }
 
-// ─── Authenticated Main Shell ─────────────────────────────────────────────────
+// ─── Main Shell ─────────────────────────────────────────────────
 
-function AuthenticatedApp() {
-  const { user } = useUser();
+function MainApp() {
+  const { user, isSignedIn } = useUser();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<Tab>('Discover');
   const [selectedEvent, setSelectedEvent] = useState<AcademicEvent | null>(null);
@@ -184,9 +185,20 @@ function AuthenticatedApp() {
     }
   }, [user]);
 
+  useEffect(() => {
+    const handleOpenPrompt = () => setShowTelegramPrompt(true);
+    document.addEventListener('open-telegram-prompt', handleOpenPrompt);
+    return () => document.removeEventListener('open-telegram-prompt', handleOpenPrompt);
+  }, []);
+
   const isAdmin = (user?.publicMetadata?.role as string) === 'admin';
 
   const handleNavTabChange = (tab: Tab) => {
+    const protectedTabs = ['My Booking', 'Notifications', 'Favorites'];
+    if (protectedTabs.includes(tab) && !isSignedIn) {
+      navigate('/login');
+      return;
+    }
     setActiveTab(tab);
     setSelectedEvent(null);
     setSeatSelectionEvent(null);
@@ -263,7 +275,13 @@ function AuthenticatedApp() {
           <EventDetails
             event={selectedEvent}
             onBackClick={() => setSelectedEvent(null)}
-            onRegisterClick={(event) => setSeatSelectionEvent(event)}
+            onRegisterClick={(event) => {
+              if (!isSignedIn) {
+                navigate('/login');
+                return;
+              }
+              setSeatSelectionEvent(event);
+            }}
           />
         ) : activeTab === 'Discover' ? (
           <DiscoveryFeed
@@ -277,8 +295,6 @@ function AuthenticatedApp() {
           />
         ) : activeTab === 'My Booking' ? (
           <MyBooking />
-        ) : activeTab === 'About' ? (
-          <About onExploreEventsClick={() => setActiveTab('Discover')} />
         ) : activeTab === 'Calendar' ? (
           <CalendarView 
             onSelectEvent={selectEvent}
@@ -327,11 +343,7 @@ function App() {
       <Route path="/login" element={<LoginView />} />
       <Route
         path="*"
-        element={
-          <ProtectedRoute>
-            <AuthenticatedApp />
-          </ProtectedRoute>
-        }
+        element={<MainApp />}
       />
     </Routes>
   );

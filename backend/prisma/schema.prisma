@@ -76,6 +76,16 @@ enum NotificationType {
   @@map("notification_type_enum")
 }
 
+enum QuestionType {
+  text
+  textarea
+  multiple_choice
+  checkboxes
+
+  @@map("question_type_enum")
+}
+
+
 enum TelegramStatus {
   pending
   sent
@@ -187,6 +197,8 @@ model Event {
   registrations     Registration[]
   favorites         Favorite[]
   notifications     Notification[]
+  questions         EventQuestion[]
+  reminders         EventReminder[]
 
   @@index([start_time, end_time], map: "idx_event_dates")
   @@map("event")
@@ -255,12 +267,14 @@ model Registration {
   user_id           String    @db.VarChar(50)
   event_id          String    @db.VarChar(50)
   event_seat_id     String?   @db.VarChar(50)
+  seat_label        String?   @db.VarChar(20)
   checked_in_at     DateTime? @db.Timestamp(6)
   deleted_at        DateTime? @db.Timestamp(6)
 
   user       UserAccount @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   event      Event       @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
   event_seat EventSeat?  @relation(fields: [event_seat_id], references: [event_seat_id], onDelete: SetNull)
+  answers    RegistrationAnswer[]
 
   @@map("registration")
 }
@@ -310,4 +324,49 @@ model TelegramNotification {
 
   @@index([status], map: "idx_telegram_bot_outbox")
   @@map("telegram_notification")
+}
+
+// 15. event_question
+model EventQuestion {
+  question_id   String       @id @db.VarChar(50)
+  event_id      String       @db.VarChar(50)
+  question_text String       @db.Text
+  question_type QuestionType @default(text)
+  options       String?      @db.Text // JSON array of strings for multiple choice
+  is_required   Boolean      @default(false)
+  order_index   Int          @default(0)
+  
+  event         Event                @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+  answers       RegistrationAnswer[]
+
+  @@map("event_question")
+}
+
+// 16. registration_answer
+model RegistrationAnswer {
+  answer_id       String @id @db.VarChar(50)
+  registration_id String @db.VarChar(50)
+  question_id     String @db.VarChar(50)
+  answer_value    String @db.Text // Can be stringified JSON for checkboxes
+
+  registration Registration  @relation(fields: [registration_id], references: [registration_id], onDelete: Cascade)
+  question     EventQuestion @relation(fields: [question_id], references: [question_id], onDelete: Cascade)
+
+  @@unique([registration_id, question_id])
+  @@map("registration_answer")
+}
+
+// 17. event_reminder
+model EventReminder {
+  reminder_id    String   @id @db.VarChar(50)
+  event_id       String   @db.VarChar(50)
+  minutes_before Int
+  scheduled_time DateTime @db.Timestamp(6)
+  is_sent        Boolean  @default(false)
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  event Event @relation(fields: [event_id], references: [event_id], onDelete: Cascade)
+
+  @@index([is_sent, scheduled_time], map: "idx_event_reminder_schedule")
+  @@map("event_reminder")
 }

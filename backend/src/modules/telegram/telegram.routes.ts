@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { requireAuth } from '@/common/middleware/auth.middleware';
-import { getConnectLink, getTelegramStatus } from './telegram.controller';
+import { getConnectLink, getTelegramStatus, disconnectTelegram } from './telegram.controller';
 
 const router = Router();
 
 // All telegram user-facing routes require auth
 router.get('/connect', requireAuth, getConnectLink);
 router.get('/status', requireAuth, getTelegramStatus);
+router.delete('/disconnect', requireAuth, disconnectTelegram);
 
 // Future admin broadcast could live under /admin/notify using the service helpers.
 

@@ -117,7 +117,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
       return base + 'bg-slate-700 border-slate-600 cursor-not-allowed text-slate-500';
     }
     if (selectedSeat === seat.id) {
-      return base + 'bg-amber-400 border-amber-500 text-slate-900 shadow-md scale-105';
+      return base + 'bg-amber-400 border-amber-500 text-[#0b2c6a] shadow-md scale-105';
     }
     return base + 'bg-white border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-300';
   };
@@ -167,10 +167,10 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center gap-0 max-w-lg">
             <div className="flex flex-col items-center">
-              <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-black shadow">
+              <div className="w-9 h-9 rounded-full bg-[#0b2c6a] text-white flex items-center justify-center text-sm font-black shadow">
                 1
               </div>
-              <span className="text-[11px] font-bold text-slate-900 mt-1.5 whitespace-nowrap">1. Seat Selection</span>
+              <span className="text-[11px] font-bold text-[#0b2c6a] mt-1.5 whitespace-nowrap">1. Seat Selection</span>
             </div>
             <div className="flex-1 h-[2px] bg-slate-200 mx-3 mb-5" />
             <div className="flex flex-col items-center">
@@ -191,7 +191,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
 
             <div className="mb-5">
-              <h2 className="text-sm font-black text-slate-900">Grand Auditorium, Building C</h2>
+              <h2 className="text-sm font-black text-[#0b2c6a]">Grand Auditorium, Building C</h2>
               <p className="text-xs font-medium text-slate-400 mt-0.5">
                 Click on an available seat to reserve it for the summit.
               </p>
@@ -223,7 +223,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
             {/* ZONE A */}
             <div className="mb-7">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-0.5 h-4 bg-slate-900 rounded-full" />
+                <div className="w-0.5 h-4 bg-[#0b2c6a] rounded-full" />
                 <span className="text-[11px] font-black text-slate-700 tracking-wider uppercase">Zone A – Premium Front</span>
               </div>
               <div className="overflow-x-auto pb-1">
@@ -234,7 +234,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
             {/* ZONE B */}
             <div className="mb-7">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-0.5 h-4 bg-slate-900 rounded-full" />
+                <div className="w-0.5 h-4 bg-[#0b2c6a] rounded-full" />
                 <span className="text-[11px] font-black text-slate-700 tracking-wider uppercase">Zone B – Main Floor</span>
               </div>
               <div className="overflow-x-auto pb-1">
@@ -245,7 +245,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
             {/* ZONE C */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-0.5 h-4 bg-slate-900 rounded-full" />
+                <div className="w-0.5 h-4 bg-[#0b2c6a] rounded-full" />
                 <span className="text-[11px] font-black text-slate-700 tracking-wider uppercase">Zone C – Rear</span>
               </div>
               <div className="overflow-x-auto pb-1">
@@ -275,7 +275,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
             </div>
 
             <div className="p-5 space-y-4">
-              <h3 className="text-sm font-black text-slate-900 leading-snug">{event.title}</h3>
+              <h3 className="text-sm font-black text-[#0b2c6a] leading-snug">{event.title}</h3>
 
               <div className="space-y-2.5">
                 <div className="flex items-start gap-2.5 text-xs font-medium text-slate-500">
@@ -309,7 +309,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
 
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500">Price</span>
-                <span className="text-sm font-black text-slate-900">Complimentary</span>
+                <span className="text-sm font-black text-[#0b2c6a]">Complimentary</span>
               </div>
 
               <button
@@ -317,7 +317,7 @@ export default function SeatSelection({ event, onBackClick, onRegisterClick }: S
                 disabled={!selectedSeat || submitting || isFull || isPast}
                 className={`w-full py-3 rounded-xl text-sm font-extrabold tracking-wide flex items-center justify-center gap-2 transition-all duration-150 ${
                   selectedSeat && !submitting && !isFull && !isPast
-                    ? 'bg-slate-900 hover:bg-blue-900 text-white shadow-sm hover:shadow active:scale-[0.98] cursor-pointer'
+                    ? 'bg-[#0b2c6a] hover:bg-[#082050] text-white shadow-sm hover:shadow active:scale-[0.98] cursor-pointer'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >

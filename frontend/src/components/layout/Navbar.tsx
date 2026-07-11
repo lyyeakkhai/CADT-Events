@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { UserButton } from '@clerk/clerk-react';
+import { UserButton, useUser } from '@clerk/clerk-react';
+import { useNavigate } from 'react-router-dom';
 import Logo from '../../assets/images/CADT10-LOGO-anniversary-03.png';
 import { useUrlSearch } from '../../hooks/useUrlSearch';
 
 interface NavbarProps {
-  activeTab: 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites';
-  setActiveTab: (tab: 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'About' | 'Notifications' | 'Favorites') => void;
+  activeTab: 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'Notifications' | 'Favorites';
+  setActiveTab: (tab: 'Discover' | 'Search' | 'My Booking' | 'Calendar' | 'Notifications' | 'Favorites') => void;
   onProfileClick?: () => void; // Kept for compatibility but we'll use Clerk UserButton
 }
 
@@ -17,7 +18,10 @@ export default function Navbar({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useUrlSearch('q');
   
-  const navItems = ['Discover', 'Search', 'My Booking', 'Calendar', 'About'] as const;
+  const { isSignedIn } = useUser();
+  const navigate = useNavigate();
+  
+  const navItems = ['Discover', 'Search', 'My Booking', 'Calendar'] as const;
 
   // Sync internal state with props if parent changes it
   useEffect(() => {
@@ -32,7 +36,7 @@ export default function Navbar({
 
   return (
     <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div className="w-full px-6 sm:px-10 lg:px-16 h-20 flex items-center">
+      <div className="w-full px-6 sm:px-10 lg:px-16 h-20 flex items-center gap-4 lg:gap-8">
         
         {/* =======================================================================
             SECTION 1: BRAND LOGO (Left Column)
@@ -46,10 +50,6 @@ export default function Navbar({
             <div className="h-10 sm:h-12 flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shrink-0">
               <img src={Logo} alt="CADT Logo" className="h-full w-auto object-contain" />
             </div>
-
-            <span className="hidden sm:block text-[17px] font-black text-[#112a46] tracking-tight group-hover:text-blue-600 transition-colors duration-150 uppercase">
-              CADT EVENT
-            </span>
           </div>
         </div>
 
@@ -94,9 +94,7 @@ export default function Navbar({
               <input 
                 type="text" 
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     setActiveTab('Search');
@@ -135,10 +133,33 @@ export default function Navbar({
             </svg>
           </button>
 
+          {/* Telegram Connect Button (if signed in) */}
+          {isSignedIn && (
+            <button
+              onClick={() => document.dispatchEvent(new CustomEvent('open-telegram-prompt'))}
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-[#0b2c6a] bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors border border-blue-200 shadow-sm"
+              title="Connect Telegram"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.888-.662 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+              </svg>
+              Telegram
+            </button>
+          )}
+
           {/* Profile Avatar via Clerk UserButton */}
-          <div className="flex items-center justify-center hover:scale-105 transition-transform duration-150 pl-1">
-            <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: 'w-9 h-9 border border-gray-200 shadow-sm rounded-full bg-gray-100' } }} />
-          </div>
+          {isSignedIn ? (
+            <div className="flex items-center justify-center hover:scale-105 transition-transform duration-150 pl-1">
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: 'w-9 h-9 border border-gray-200 shadow-sm rounded-full bg-gray-100' } }} />
+            </div>
+          ) : (
+            <button 
+              onClick={() => navigate('/login')} 
+              className="text-sm font-semibold text-white bg-[#0b2c6a] px-5 py-2 rounded-full hover:bg-[#082050] transition-colors shadow-sm ml-2"
+            >
+              Log In
+            </button>
+          )}
 
           {/* Mobile Hamburg Drawer Option Selector Menu Trigger */}
           <button

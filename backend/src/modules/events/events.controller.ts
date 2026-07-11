@@ -19,7 +19,15 @@ const mapEvent = (e: any) => ({
   location: e.location || (e.venue ? e.venue.venue_name : null),
   venue: e.venue ? { name: e.venue.venue_name, address: e.venue.venue_name } : null,
   availableSeats: e.capacity != null ? Math.max(0, e.capacity - (e._count?.registrations || 0)) : null,
-  _count: { bookings: e._count?.registrations || 0 }
+  _count: { bookings: e._count?.registrations || 0 },
+  questions: e.questions ? e.questions.map((q: any) => ({
+    id: q.question_id,
+    questionText: q.question_text,
+    questionType: q.question_type,
+    options: q.options ? JSON.parse(q.options) : [],
+    isRequired: q.is_required,
+    orderIndex: q.order_index
+  })) : [],
 });
 
 // ── GET /api/events ─────────────────────────────────────────────────────────
@@ -50,6 +58,7 @@ export async function listEvents(req: Request, res: Response, next: NextFunction
       include: {
         venue: { select: { venue_name: true } },
         _count: { select: { registrations: true } },
+        questions: { orderBy: { order_index: 'asc' } }
       },
       orderBy: { start_time: 'asc' },
     });
@@ -98,6 +107,7 @@ export async function getEvent(req: Request, res: Response, next: NextFunction) 
       include: {
         venue: true,
         _count: { select: { registrations: true } },
+        questions: { orderBy: { order_index: 'asc' } }
       },
     });
 
@@ -147,6 +157,40 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
         status: (body.status?.toLowerCase() as any) ?? 'draft',
       },
     });
+
+    if (body.reminderSchedules && body.reminderSchedules.length > 0) {
+      console.log(`[Backend createEvent] Creating ${body.reminderSchedules.length} reminder schedules...`);
+      await prisma.eventReminder.createMany({
+        data: body.reminderSchedules.map(minutes => ({
+          reminder_id: require('crypto').randomUUID(),
+          event_id: uuid,
+          minutes_before: minutes,
+          scheduled_time: new Date(startTs.getTime() - minutes * 60000)
+        }))
+      });
+    }
+
+    if (body.questions && body.questions.length > 0) {
+      console.log(`[Backend createEvent] Creating ${body.questions.length} questions...`);
+      await prisma.eventQuestion.createMany({
+        data: body.questions.map(q => ({
+          question_id: require('crypto').randomUUID(),
+          event_id: uuid,
+          question_text: q.questionText,
+          question_type: q.questionType,
+          options: q.options && q.options.length > 0 ? JSON.stringify(q.options) : null,
+          is_required: q.isRequired,
+          order_index: q.orderIndex
+        }))
+      });
+      
+      // Re-fetch event with questions to return
+      const eventWithQuestions = await prisma.event.findUnique({
+        where: { event_id: uuid },
+        include: { questions: { orderBy: { order_index: 'asc' } } }
+      });
+      return res.status(201).json({ success: true, data: mapEvent(eventWithQuestions) });
+    }
 
     console.log('[Backend createEvent] Successfully created event ID:', event.event_id);
     res.status(201).json({ success: true, data: mapEvent(event) });
@@ -200,3 +244,26 @@ export async function deleteEvent(req: Request, res: Response, next: NextFunctio
     next(err);
   }
 }
+
+// ── GET /api/events/:id/seats ───────────────────────────────────────────────
+export async function getEventSeats(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = (req.params as any).id as string;
+    
+    // Check if event exists
+    const event = await prisma.event.findFirst({ where: { event_id: id, deleted_at: null } });
+    if (!event) throw new NotFoundError('Event not found');
+
+    const registrations = await prisma.registration.findMany({
+      where: { event_id: id, deleted_at: null, seat_label: { not: null } },
+      select: { seat_label: true }
+    });
+
+    const occupiedSeats = registrations.map(r => r.seat_label);
+
+    res.json({ success: true, data: { occupiedSeats } });
+  } catch (err) {
+    next(err);
+  }
+}
+

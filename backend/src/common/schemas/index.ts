@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-// ── Events ─────────────────────────────────────────────────────────────────
+const QuestionSchema = z.object({
+  questionText: z.string().min(1),
+  questionType: z.enum(['text', 'textarea', 'multiple_choice', 'checkboxes']),
+  options: z.array(z.string()).optional(),
+  isRequired: z.boolean().default(false),
+  orderIndex: z.number().int().default(0),
+});
+
 export const CreateEventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
@@ -13,6 +20,8 @@ export const CreateEventSchema = z.object({
   creditValue: z.number().int().min(0).default(0),
   isFeatured: z.boolean().default(false),
   status: z.enum(['DRAFT', 'PUBLISHED']).default('DRAFT'),
+  questions: z.array(QuestionSchema).optional(),
+  reminderSchedules: z.array(z.number()).optional(),
 });
 
 export type CreateEventInput = z.infer<typeof CreateEventSchema>;
@@ -23,6 +32,8 @@ export type UpdateEventInput = z.infer<typeof UpdateEventSchema>;
 // ── Bookings ────────────────────────────────────────────────────────────────
 export const CreateBookingSchema = z.object({
   eventId: z.string().uuid('Invalid event ID'),
+  seatLabel: z.string().optional(),
+  answers: z.record(z.string()).optional(),
 });
 
 export type CreateBookingInput = z.infer<typeof CreateBookingSchema>;
