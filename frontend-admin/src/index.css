@@ -189,7 +189,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 18px 16px 14px;
+    padding: 14px 12px;
     cursor: pointer;
     border-bottom: 1px solid #1e293b;
     min-height: 64px;
@@ -197,36 +197,76 @@
     white-space: nowrap;
   }
 
+  /* Landscape CADT logo (same asset as student frontend) */
   .sidebar-logo {
-    width: 34px;
-    height: 34px;
-    background: #ffffff;
-    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    padding: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 6px 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     overflow: hidden;
-    transition: transform 0.2s, rotate 0.2s;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+
+  .sidebar-brand-expanded .sidebar-logo {
+    height: 42px;
+    width: auto;
+    max-width: 128px;
+    padding: 6px 10px;
+  }
+
+  .sidebar-brand-collapsed .sidebar-logo {
+    width: 40px;
+    height: 40px;
+    padding: 4px;
+  }
+
+  .sidebar-logo-img {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+  }
+
   .sidebar-brand:hover .sidebar-logo {
-    transform: scale(1.08) rotate(2deg);
+    transform: scale(1.04);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   }
 
   .sidebar-brand-text {
-    font-size: 15px;
-    font-weight: 900;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 14px;
+    font-weight: 800;
     color: #ffffff;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.2px;
+    line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
     transition: color 0.15s;
+    min-width: 0;
   }
+
+  .sidebar-brand-sub {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+
   .sidebar-brand:hover .sidebar-brand-text {
     color: #fbbf24;
+  }
+  .sidebar-brand:hover .sidebar-brand-sub {
+    color: #fcd34d;
   }
 
   .sidebar-nav {

@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { UserButton } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
-import Logo from '../assets/logo.png';
+// Same CADT anniversary logo as student frontend navbar
+import Logo from '../assets/CADT10-LOGO-anniversary-03.png';
 import { USER_FRONTEND_URL } from '../lib/urls';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../lib/apiClient';
@@ -83,12 +84,29 @@ export default function Sidebar({
       style={{ width }}
       aria-hidden={isMobile && !mobileOpen}
     >
-      {/* Brand */}
-      <div className="sidebar-brand" onClick={() => go('/')}>
+      {/* Brand — same CADT logo treatment as student portal */}
+      <div
+        className={`sidebar-brand ${showLabels ? 'sidebar-brand-expanded' : 'sidebar-brand-collapsed'}`}
+        onClick={() => go('/')}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            go('/');
+          }
+        }}
+        aria-label="CADT Events admin home"
+      >
         <span className="sidebar-logo">
-          <img src={Logo} alt="CADT Event Logo" className="w-full h-full object-contain" />
+          <img src={Logo} alt="CADT Events" className="sidebar-logo-img" />
         </span>
-        {showLabels && <span className="sidebar-brand-text">CADT Event</span>}
+        {showLabels && (
+          <span className="sidebar-brand-text">
+            CADT Events
+            <span className="sidebar-brand-sub">Admin</span>
+          </span>
+        )}
         {isMobile && (
           <button
             type="button"
