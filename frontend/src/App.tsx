@@ -301,7 +301,7 @@ function MainApp() {
             onGoHome={() => setActiveTab('Discover')}
           />
         ) : activeTab === 'Notifications' ? (
-          <NotificationView />
+          <NotificationView onSelectEvent={selectEvent} />
         ) : activeTab === 'Favorites' ? (
           <FavoritesView 
             onSelectEvent={selectEvent}

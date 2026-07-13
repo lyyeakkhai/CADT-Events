@@ -114,7 +114,9 @@ export async function getAdminNotifications(req: Request, res: Response, next: N
         read: true,
         timestamp: reg.created_at ? reg.created_at.toISOString() : new Date().toISOString(),
         type: 'event',
-        severity: 'info'
+        severity: 'info',
+        eventId: reg.event_id,
+        href: `/events/${reg.event_id}`,
       });
     });
 
@@ -126,7 +128,9 @@ export async function getAdminNotifications(req: Request, res: Response, next: N
         read: true,
         timestamp: evt.created_at ? evt.created_at.toISOString() : new Date().toISOString(),
         type: 'system',
-        severity: 'info'
+        severity: 'info',
+        eventId: evt.event_id,
+        href: `/events/${evt.event_id}`,
       });
     });
 

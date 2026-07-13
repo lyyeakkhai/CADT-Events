@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, AlertTriangle, BellOff, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, AlertTriangle, BellOff, Activity, ChevronRight } from 'lucide-react';
 import apiClient from '../lib/apiClient';
 
 export interface Notification {
@@ -10,6 +11,8 @@ export interface Notification {
   timestamp: string;
   type: 'alert' | 'event' | 'system';
   severity?: 'critical' | 'warning' | 'info';
+  eventId?: string;
+  href?: string;
 }
 
 function formatWhen(ts: string) {
@@ -28,6 +31,7 @@ function formatWhen(ts: string) {
 }
 
 export default function NotificationsView() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +64,19 @@ export default function NotificationsView() {
     [notifications, searchQuery]
   );
 
+  const openItem = (item: Notification) => {
+    const path =
+      item.href ||
+      (item.eventId ? `/events/${item.eventId}` : null) ||
+      // Fallback: ids are reg-<uuid> / evt-<uuid>
+      (item.id.startsWith('evt-') ? `/events/${item.id.slice(4)}` : null) ||
+      (item.id.startsWith('reg-') && item.eventId ? `/events/${item.eventId}` : null);
+
+    if (path) {
+      navigate(path);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-8 w-full min-h-screen text-slate-900 animate-fade-in font-sans">
       <div className="mb-8">
@@ -68,8 +85,8 @@ export default function NotificationsView() {
           <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight">Activity</h1>
         </div>
         <p className="text-sm text-slate-500 max-w-xl">
-          Recent registrations and events created across the platform. This is a live activity feed
-          (not a persistent inbox).
+          Recent registrations and events created across the platform. Click an item to open the
+          related event.
         </p>
       </div>
 
@@ -81,7 +98,7 @@ export default function NotificationsView() {
             placeholder="Search activity…"
             className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-[8px] text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all placeholder:text-slate-400 text-slate-700 shadow-sm"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
           />
         </div>
         <span className="text-xs text-slate-400 font-medium">
@@ -114,27 +131,50 @@ export default function NotificationsView() {
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {filtered.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-center gap-4 py-4 px-4 hover:bg-slate-50/50 transition-colors"
-              >
-                <div
-                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    item.type === 'event' ? 'bg-emerald-500' : 'bg-indigo-500'
-                  }`}
-                />
-                <div className="flex-1 min-w-0 pr-4">
-                  <h4 className="text-[14px] mb-0.5 truncate font-semibold text-slate-900">
-                    {item.title}
-                  </h4>
-                  <p className="text-[13px] text-slate-500 truncate">{item.message}</p>
-                </div>
-                <div className="text-[13px] text-slate-500 flex-shrink-0 w-36 text-right">
-                  {formatWhen(item.timestamp)}
-                </div>
-              </li>
-            ))}
+            {filtered.map((item) => {
+              const clickable = !!(item.href || item.eventId || item.id.startsWith('evt-'));
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => openItem(item)}
+                    disabled={!clickable}
+                    className={`w-full flex items-center gap-4 py-4 px-4 text-left transition-colors ${
+                      clickable
+                        ? 'hover:bg-indigo-50/60 cursor-pointer focus:outline-none focus-visible:bg-indigo-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-200'
+                        : 'cursor-default opacity-80'
+                    }`}
+                    aria-label={
+                      clickable
+                        ? `${item.title}. Open related event.`
+                        : item.title
+                    }
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        item.type === 'event' ? 'bg-emerald-500' : 'bg-indigo-500'
+                      }`}
+                    />
+                    <div className="flex-1 min-w-0 pr-2">
+                      <h4 className="text-[14px] mb-0.5 truncate font-semibold text-slate-900">
+                        {item.title}
+                      </h4>
+                      <p className="text-[13px] text-slate-500 truncate">{item.message}</p>
+                    </div>
+                    <div className="text-[13px] text-slate-500 flex-shrink-0 w-32 text-right hidden sm:block">
+                      {formatWhen(item.timestamp)}
+                    </div>
+                    {clickable && (
+                      <ChevronRight
+                        size={18}
+                        className="text-slate-300 flex-shrink-0"
+                        aria-hidden
+                      />
+                    )}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
