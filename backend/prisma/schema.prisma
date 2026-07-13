@@ -356,6 +356,16 @@ model RegistrationAnswer {
   @@map("registration_answer")
 }
 
+// 17b. system_setting — key/value app config (admin Settings UI)
+model SystemSetting {
+  key        String   @id @db.VarChar(100)
+  value      String   @db.Text
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  updated_by String?  @db.VarChar(50)
+
+  @@map("system_setting")
+}
+
 // 17. event_reminder
 model EventReminder {
   reminder_id    String   @id @db.VarChar(50)

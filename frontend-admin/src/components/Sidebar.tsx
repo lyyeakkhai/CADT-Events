@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   Calendar,
@@ -9,16 +9,22 @@ import {
   ChevronRight,
   Bell,
   Users,
+  X,
 } from 'lucide-react';
 import { UserButton } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
 import Logo from '../assets/logo.png';
+import { USER_FRONTEND_URL } from '../lib/urls';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../lib/apiClient';
 
 interface SidebarProps {
   currentView: ViewType;
   isCollapsed: boolean;
   setIsCollapsed: (v: boolean) => void;
+  mobileOpen?: boolean;
+  isMobile?: boolean;
+  onNavigate?: () => void;
 }
 
 const navItems = [
@@ -29,23 +35,72 @@ const navItems = [
   { id: 'export' as ViewType, label: 'Export', icon: Download },
 ];
 
-
-export default function Sidebar({ currentView, isCollapsed, setIsCollapsed }: SidebarProps) {
-  const [notifCount] = useState(3);
+export default function Sidebar({
+  currentView,
+  isCollapsed,
+  setIsCollapsed,
+  mobileOpen = false,
+  isMobile = false,
+  onNavigate,
+}: SidebarProps) {
+  const [notifCount, setNotifCount] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiClient.get('/notifications/admin');
+        const list: { timestamp?: string }[] = res.data?.data || [];
+        const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+        const recent = list.filter((n) => {
+          const t = n.timestamp ? new Date(n.timestamp).getTime() : 0;
+          return t >= dayAgo;
+        }).length;
+        if (!cancelled) setNotifCount(Math.min(recent, 9));
+      } catch {
+        if (!cancelled) setNotifCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentView]);
+
+  const go = (path: string) => {
+    navigate(path);
+    onNavigate?.();
+  };
+
+  const showLabels = isMobile || !isCollapsed;
+  const width = isMobile ? 280 : isCollapsed ? 64 : 240;
 
   return (
     <aside
-      className="sidebar-root"
-      style={{ width: isCollapsed ? 64 : 240 }}
+      className={`sidebar-root ${isMobile ? 'sidebar-mobile' : ''} ${
+        isMobile && mobileOpen ? 'sidebar-mobile-open' : ''
+      } ${isMobile && !mobileOpen ? 'sidebar-mobile-closed' : ''}`}
+      style={{ width }}
+      aria-hidden={isMobile && !mobileOpen}
     >
       {/* Brand */}
-      <div className="sidebar-brand" onClick={() => navigate('/')}>
+      <div className="sidebar-brand" onClick={() => go('/')}>
         <span className="sidebar-logo">
           <img src={Logo} alt="CADT Event Logo" className="w-full h-full object-contain" />
         </span>
-        {!isCollapsed && (
-          <span className="sidebar-brand-text">CADT Event</span>
+        {showLabels && <span className="sidebar-brand-text">CADT Event</span>}
+        {isMobile && (
+          <button
+            type="button"
+            className="sidebar-mobile-close"
+            aria-label="Close menu"
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigate?.();
+            }}
+          >
+            <X size={18} />
+          </button>
         )}
       </div>
 
@@ -57,13 +112,14 @@ export default function Sidebar({ currentView, isCollapsed, setIsCollapsed }: Si
           return (
             <button
               key={item.id}
-              onClick={() => navigate(item.id === 'dashboard' ? '/' : '/' + item.id)}
+              type="button"
+              onClick={() => go(item.id === 'dashboard' ? '/' : '/' + item.id)}
               className={`sidebar-item ${isActive ? 'sidebar-item-active' : ''}`}
-              title={isCollapsed ? item.label : undefined}
+              title={!showLabels ? item.label : undefined}
             >
               <Icon size={19} className="sidebar-item-icon" />
-              {!isCollapsed && <span className="sidebar-item-label">{item.label}</span>}
-              {isActive && !isCollapsed && <span className="sidebar-active-dot" />}
+              {showLabels && <span className="sidebar-item-label">{item.label}</span>}
+              {isActive && showLabels && <span className="sidebar-active-dot" />}
             </button>
           );
         })}
@@ -71,46 +127,48 @@ export default function Sidebar({ currentView, isCollapsed, setIsCollapsed }: Si
 
       {/* Bottom Controls */}
       <div className="sidebar-bottom">
-        {/* Notification bell */}
         <button
+          type="button"
           className={`sidebar-item ${currentView === 'notifications' ? 'sidebar-item-active' : ''}`}
-          title={isCollapsed ? 'Notifications' : undefined}
-          onClick={() => navigate('/notifications')}
+          title={!showLabels ? 'Activity' : undefined}
+          onClick={() => go('/notifications')}
         >
           <Bell size={19} className="sidebar-item-icon" />
-          {!isCollapsed && <span className="sidebar-item-label">Notifications</span>}
+          {showLabels && <span className="sidebar-item-label">Activity</span>}
           {notifCount > 0 && <span className="sidebar-badge">{notifCount}</span>}
-          {currentView === 'notifications' && !isCollapsed && <span className="sidebar-active-dot" />}
+          {currentView === 'notifications' && showLabels && (
+            <span className="sidebar-active-dot" />
+          )}
         </button>
 
-        {/* Settings */}
         <button
+          type="button"
           className={`sidebar-item ${currentView === 'settings' ? 'sidebar-item-active' : ''}`}
-          title={isCollapsed ? 'Settings' : undefined}
-          onClick={() => navigate('/settings')}
+          title={!showLabels ? 'Settings' : undefined}
+          onClick={() => go('/settings')}
         >
           <Settings size={19} className="sidebar-item-icon" />
-          {!isCollapsed && <span className="sidebar-item-label">Settings</span>}
-          {currentView === 'settings' && !isCollapsed && <span className="sidebar-active-dot" />}
+          {showLabels && <span className="sidebar-item-label">Settings</span>}
+          {currentView === 'settings' && showLabels && <span className="sidebar-active-dot" />}
         </button>
-
 
         <div className="sidebar-divider" />
 
-        {/* User */}
-        <div className={`sidebar-user ${isCollapsed ? 'justify-center' : ''}`}>
-          <UserButton afterSignOutUrl="http://localhost:5173" />
-          {!isCollapsed && <span className="sidebar-user-label">Account</span>}
+        <div className={`sidebar-user ${!showLabels ? 'justify-center' : ''}`}>
+          <UserButton afterSignOutUrl={USER_FRONTEND_URL} />
+          {showLabels && <span className="sidebar-user-label">Account</span>}
         </div>
 
-        {/* Collapse toggle */}
-        <button
-          className="sidebar-collapse-btn"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
+        {!isMobile && (
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        )}
       </div>
     </aside>
   );

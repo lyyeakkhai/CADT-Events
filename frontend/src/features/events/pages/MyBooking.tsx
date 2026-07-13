@@ -146,6 +146,11 @@ export default function MyBooking() {
                     <div>
                       <p className="text-xs font-semibold text-slate-400 mb-0.5">Booking ID</p>
                       <p className="text-sm font-extrabold text-[#0b2c6a]">{upcomingBookings[0].bookingReferenceId}</p>
+                      {upcomingBookings[0].seatLabel && (
+                        <p className="text-xs font-bold text-slate-500 mt-1">
+                          Seat {upcomingBookings[0].seatLabel}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

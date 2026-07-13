@@ -98,7 +98,7 @@ export default function BookingConfirmed({
               </div>
               <div>
                 <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Seat Number</p>
-                <p className="text-sm font-black text-[#0b2c6a]">Zone A | {seat}</p>
+                <p className="text-sm font-black text-[#0b2c6a]">{seat || 'Assigned at check-in'}</p>
               </div>
             </div>
 

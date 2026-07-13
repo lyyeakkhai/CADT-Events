@@ -13,6 +13,7 @@ Living documentation for the CADT Events platform. Organized by **what the doc i
 | [`api/`](./api/) | API contracts and conventions | Integrating clients, writing handlers |
 | [`guides/`](./guides/) | How-to guides for contributors | Setting up locally, contributing |
 | [`operations/`](./operations/) | Deployment, monitoring, runbooks | Shipping, debugging incidents |
+| [`operations/deploy.md`](./operations/deploy.md) | Free-tier Render deploy + CI | Student demo / testing deploys |
 
 ## Where do I put a new doc?
 

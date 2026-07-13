@@ -31,6 +31,7 @@ export interface ApiBooking {
   bookingReferenceId: string;
   status: string;
   qrCodeToken: string;
+  seatLabel?: string | null;
   checkedInAt?: string | null;
   createdAt: string;
   event: {
@@ -44,6 +45,14 @@ export interface ApiBooking {
     creditValue?: number;
     venue: { name: string; address: string | null } | null;
   };
+}
+
+export interface ApiEventSeats {
+  occupiedSeats: string[];
+  totalBookings: number;
+  capacity: number | null;
+  availableSeats: number | null;
+  venueName: string | null;
 }
 
 export interface TelegramConnectData {
@@ -99,13 +108,27 @@ export function getEvent(id: string) {
 export function useEventsApi() {
   const { getToken } = useAuth();
 
-  async function bookEvent(eventId: string): Promise<ApiBooking> {
+  async function bookEvent(eventId: string, seatLabel?: string): Promise<ApiBooking> {
     const token = await getToken();
     if (!token) throw new Error('Not authenticated');
+    const body: { eventId: string; seatLabel?: string } = { eventId };
+    if (seatLabel) body.seatLabel = seatLabel;
     const res = await authFetch<{ success: boolean; data: ApiBooking }>(
       '/bookings',
       token,
-      { method: 'POST', body: JSON.stringify({ eventId }) }
+      { method: 'POST', body: JSON.stringify(body) }
+    );
+    return res.data;
+  }
+
+  /** Live occupied seats + capacity for the seat map (not static mock data). */
+  async function getEventSeats(eventId: string): Promise<ApiEventSeats> {
+    const token = await getToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await authFetch<{ success: boolean; data: ApiEventSeats }>(
+      `/events/${eventId}/seats`,
+      token,
+      { cache: 'no-store' },
     );
     return res.data;
   }
@@ -123,7 +146,7 @@ export function useEventsApi() {
     await authFetch(`/bookings/${bookingId}`, token, { method: 'DELETE' });
   }
 
-  return { bookEvent, getMyBookings, cancelBooking };
+  return { bookEvent, getEventSeats, getMyBookings, cancelBooking };
 }
 
 // ── Telegram (authenticated) ────────────────────────────────────────────────

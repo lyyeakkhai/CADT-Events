@@ -11,8 +11,9 @@ const QuestionSchema = z.object({
 export const CreateEventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  startTimestamp: z.string().datetime({ message: 'Invalid start date/time' }),
-  endTimestamp: z.string().datetime({ message: 'Invalid end date/time' }),
+  // Accept ISO strings from clients (with or without ms / offset)
+  startTimestamp: z.string().min(1, 'Start date/time is required'),
+  endTimestamp: z.string().min(1, 'End date/time is required'),
   location: z.string().min(2, 'Location is required'),
   capacity: z.number().int().positive().optional(),
   coverImageUrl: z.string().url().optional().or(z.literal('')),
@@ -32,8 +33,14 @@ export type UpdateEventInput = z.infer<typeof UpdateEventSchema>;
 // ── Bookings ────────────────────────────────────────────────────────────────
 export const CreateBookingSchema = z.object({
   eventId: z.string().uuid('Invalid event ID'),
-  seatLabel: z.string().optional(),
-  answers: z.record(z.string()).optional(),
+  // Seat map labels e.g. A1, B10 — optional for capacity-only bookings
+  seatLabel: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z][0-9]{1,2}$/, 'Invalid seat label')
+    .transform((s) => s.toUpperCase())
+    .optional(),
+  answers: z.record(z.string(), z.string()).optional(),
 });
 
 export type CreateBookingInput = z.infer<typeof CreateBookingSchema>;

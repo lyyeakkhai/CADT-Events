@@ -1,6 +1,7 @@
 import { School, Search, Bell, Settings } from 'lucide-react';
 import { UserButton } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
+import { USER_FRONTEND_URL } from '../lib/urls';
 
 interface NavbarProps {
   currentView: ViewType;
@@ -68,7 +69,7 @@ export default function Navbar({ currentView, setCurrentView, searchQuery, setSe
           <button className="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-all">
             <Settings size={20} />
           </button>
-          <UserButton afterSignOutUrl="http://localhost:5173" />
+          <UserButton afterSignOutUrl={USER_FRONTEND_URL} />
         </div>
       </div>
     </header>

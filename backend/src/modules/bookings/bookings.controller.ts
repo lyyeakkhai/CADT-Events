@@ -119,6 +119,7 @@ export async function createBooking(req: Request, res: Response, next: NextFunct
         bookingReferenceId: created.booking_reference,
         userId: created.user_id,
         eventId: created.event_id,
+        seatLabel: created.seat_label,
         status: 'CONFIRMED',
         qrCodeToken: created.qr_code || created.booking_reference,
         createdAt: created.created_at,
@@ -138,14 +139,27 @@ export async function createBooking(req: Request, res: Response, next: NextFunct
     });
 
     // Send Telegram notification (non-blocking)
-    const eventDate = booking.event.startTimestamp.toLocaleString();
-    const message = `🎉 <b>Booking Confirmed!</b>\n\n<b>Event:</b> ${booking.event.title}\n<b>Date:</b> ${eventDate}\n<b>Ticket Code:</b> <code>${booking.bookingReferenceId}</code>\n\nSee you there!`;
-    const notificationOptions = {
+    const eventDate = booking.event.startTimestamp.toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    const seatLine = booking.seatLabel ? `\nSeat: ${booking.seatLabel}` : '';
+    // Telegram URL buttons require https:// (not localhost)
+    const publicWeb =
+      [process.env.PUBLIC_WEB_URL, process.env.FRONTEND_URL, 'https://cadt-events-web.onrender.com']
+        .map((u) => (u || '').trim().replace(/\/$/, ''))
+        .find((u) => /^https:\/\//i.test(u)) || 'https://cadt-events-web.onrender.com';
+    const bookingsUrl = `${publicWeb}/my-booking`;
+    const message =
+      `<b>CADT Events</b> · Registration confirmed\n\n` +
+      `<b>${booking.event.title}</b>\n` +
+      `Date: ${eventDate}${seatLine}\n` +
+      `Reference: <code>${booking.bookingReferenceId}</code>`;
+    notifyUserViaTelegram(user!.user_id, message, {
       imageUrl: booking.event.coverImageUrl,
-      buttonText: 'View My Bookings',
-      buttonUrl: 'https://cadt-events.app/my-bookings'
-    };
-    notifyUserViaTelegram(user!.user_id, message, notificationOptions).catch(err => {
+      buttonText: 'My registrations',
+      buttonUrl: bookingsUrl,
+    }).catch(err => {
       console.error('Failed to send Telegram notification:', err);
     });
 
@@ -192,6 +206,7 @@ export async function getMyBookings(req: Request, res: Response, next: NextFunct
       bookingReferenceId: b.booking_reference,
       userId: b.user_id,
       eventId: b.event_id,
+      seatLabel: b.seat_label,
       status: 'CONFIRMED',
       qrCodeToken: b.qr_code || b.booking_reference,
       createdAt: b.created_at,
@@ -242,7 +257,9 @@ export async function cancelBooking(req: Request, res: Response, next: NextFunct
     });
 
     // Send Telegram notification (non-blocking)
-    const message = `❌ <b>Booking Cancelled</b>\n\nYour booking for <b>${booking.event.event_title}</b> has been cancelled.`;
+    const message =
+      `<b>CADT Events</b> · Registration cancelled\n\n` +
+      `Your registration for <b>${booking.event.event_title}</b> has been cancelled.`;
     notifyUserViaTelegram(user.user_id, message).catch(err => {
       console.error('Failed to send Telegram notification:', err);
     });

@@ -3,6 +3,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { prisma } from '@/lib/prisma';
 import { clerkClient } from '@clerk/express';
+import { isAdminEmail } from '@/config/admins';
 
 export const clerkWebhookRouter = Router();
 
@@ -43,42 +44,56 @@ clerkWebhookRouter.post('/', bodyParser.raw({ type: 'application/json' }), async
   const eventType = evt.type;
 
   if (eventType === 'user.created' || eventType === 'user.updated') {
-    const email = evt.data.email_addresses?.[0]?.email_address;
+    const email = evt.data.email_addresses?.[0]?.email_address as string | undefined;
     const name = `${evt.data.first_name || ''} ${evt.data.last_name || ''}`.trim();
-    
-    // Explicitly define the admin email whitelist
-    let role = 'STUDENT';
-    const adminEmails = ['admin123@stuff.cadt.edu.kh'];
-    
-    if (email && adminEmails.includes(email.toLowerCase())) {
-      role = 'ADMIN';
-    }
+
+    // ADMIN_EMAILS env (comma-separated) — see backend/.env.example
+    const role = isAdminEmail(email) ? 'ADMIN' : 'STUDENT';
 
     try {
-      await prisma.userAccount.upsert({
-        where: { email: email },
-        update: {
-          user_id: id,
-          full_name: name || 'User',
-          role: 'student',
-        },
-        create: {
-          user_id: id,
-          email: email,
-          full_name: name || 'User',
-          role: 'student',
-          password_hash: 'managed-by-clerk',
-        }
-      });
-      
-      // Update Clerk so the frontend immediately knows their role without a DB query
+      if (email) {
+        await prisma.userAccount.upsert({
+          where: { email: email },
+          update: {
+            user_id: id,
+            full_name: name || 'User',
+            role: 'student',
+          },
+          create: {
+            user_id: id,
+            email: email,
+            full_name: name || 'User',
+            role: 'student',
+            password_hash: 'managed-by-clerk',
+          },
+        });
+      }
+
+      // So admin frontend (publicMetadata.role) and requireRole both work
       await clerkClient.users.updateUserMetadata(id, {
         publicMetadata: {
           role: role,
         },
       });
-      
-      console.log(`User ${id} processed successfully as ${role}.`);
+
+      // Keep admin table in sync for listUsers merge (demo teachers)
+      if (role === 'ADMIN' && email) {
+        await prisma.admin.upsert({
+          where: { email },
+          update: {
+            admin_id: id,
+            full_name: name || 'Admin',
+          },
+          create: {
+            admin_id: id,
+            email,
+            full_name: name || 'Admin',
+            password_hash: 'managed-by-clerk',
+          },
+        });
+      }
+
+      console.log(`User ${id} (${email}) processed as ${role}.`);
     } catch (dbErr) {
       console.error('Error syncing user to DB or Clerk:', dbErr);
       return res.status(500).json({ error: 'Database or Clerk error' });

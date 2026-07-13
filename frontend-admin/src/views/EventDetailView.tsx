@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
-import { ChevronRight, DownloadCloud, Edit2, RefreshCw, CheckCircle2, Circle, Users, MapPin, Calendar as CalendarIcon, Loader2, Send, UploadCloud, X, Image as ImageIcon } from 'lucide-react';
+import { ChevronRight, DownloadCloud, Edit2, RefreshCw, CheckCircle2, Circle, Users, MapPin, Calendar as CalendarIcon, Loader2, Send, UploadCloud, X, Image as ImageIcon, EyeOff, Trash2, Globe, AlertCircle } from 'lucide-react';
 import apiClient from '../lib/apiClient';
 import axios from 'axios';
 import { exportToCSV, exportToExcel, exportToPDF, type ExportDataRow } from '../lib/exportUtils';
@@ -47,6 +47,9 @@ export default function EventDetailView() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // For edit: cache file locally, only upload to Cloudinary on Save/Publish confirm (same as Create)
@@ -191,6 +194,7 @@ export default function EventDetailView() {
   const handleEditSubmit = async (status: 'DRAFT' | 'PUBLISHED') => {
     setSubmitting(true);
     setUploadError(null);
+    setActionError(null);
 
     try {
       let finalCoverImageUrl = editForm.coverImageUrl || undefined;
@@ -199,9 +203,7 @@ export default function EventDetailView() {
       if (editCoverImageFile) {
         setUploadingImage(true);
         try {
-          console.log('[Admin Upload Edit] Uploading cached image now (on save confirm)...');
           finalCoverImageUrl = await uploadImageFile(editCoverImageFile);
-          console.log('[Admin Upload Edit] Image uploaded on confirm, url=', finalCoverImageUrl);
         } catch (e: any) {
           const msg = e?.response?.data?.error || e.message || 'Failed to upload image';
           setUploadError(msg);
@@ -235,12 +237,56 @@ export default function EventDetailView() {
       setEditLocalPreviewUrl('');
 
       setIsEditing(false);
+      setActionSuccess(
+        status === 'PUBLISHED'
+          ? 'Event published — students can see it on the public site.'
+          : 'Saved as draft — not visible to students.'
+      );
       fetchData();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to update event', e);
+      setActionError(e?.response?.data?.message || e?.message || 'Failed to update event');
     } finally {
       setSubmitting(false);
       setUploadingImage(false);
+    }
+  };
+
+  /** Quick publish / unpublish without opening the full editor */
+  const setEventStatus = async (status: 'DRAFT' | 'PUBLISHED') => {
+    if (!id || !event) return;
+    setActionBusy(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await apiClient.patch(`/events/${id}`, { status });
+      setActionSuccess(
+        status === 'PUBLISHED'
+          ? 'Published — open the student site to show teachers how discovery works.'
+          : 'Unpublished (draft) — hidden from the student Discover feed.'
+      );
+      await fetchData();
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message || e?.message || 'Failed to update status');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!id || !event) return;
+    const ok = window.confirm(
+      `Delete "${event.title}"?\n\nStudents will no longer see it. This can be restored only from the database.`
+    );
+    if (!ok) return;
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await apiClient.delete(`/events/${id}`);
+      navigate('/');
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message || e?.message || 'Failed to delete event');
+      setActionBusy(false);
     }
   };
 
@@ -260,7 +306,7 @@ export default function EventDetailView() {
   );
 
   return (
-    <div className="w-full px-6 py-6 fade-in max-w-7xl mx-auto">
+    <div className="w-full px-3 sm:px-6 py-4 sm:py-6 fade-in max-w-7xl mx-auto">
       {/* Header */}
       <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -271,16 +317,35 @@ export default function EventDetailView() {
           </nav>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{event.title}</h1>
         </div>
-        <div className="flex gap-4 relative">
+        <div className="flex flex-wrap gap-3 relative">
+          {/* Publish / Unpublish — main demo controls for teachers */}
+          {(event.status || '').toUpperCase() === 'PUBLISHED' ? (
+            <button
+              disabled={actionBusy}
+              onClick={() => setEventStatus('DRAFT')}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 font-semibold hover:bg-amber-100 transition-all shadow-sm disabled:opacity-50"
+              title="Hide from student Discover feed"
+            >
+              <EyeOff size={18} /> Unpublish
+            </button>
+          ) : (
+            <button
+              disabled={actionBusy}
+              onClick={() => setEventStatus('PUBLISHED')}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-50"
+              title="Show on student Discover feed"
+            >
+              <Globe size={18} /> Publish for students
+            </button>
+          )}
+
           <button onClick={() => {
             const nextEditing = !isEditing;
             if (nextEditing && event) {
               setEditForm(event);
-              // Clear any previously cached file when (re)opening edit
               setEditCoverImageFile(null);
               setEditLocalPreviewUrl('');
             } else {
-              // Canceling edit: discard pending file
               setEditCoverImageFile(null);
               setEditLocalPreviewUrl('');
             }
@@ -305,8 +370,29 @@ export default function EventDetailView() {
           <button onClick={fetchData} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-all shadow-md">
             <RefreshCw size={18} /> Refresh
           </button>
+
+          <button
+            disabled={actionBusy}
+            onClick={handleDeleteEvent}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-all shadow-sm disabled:opacity-50"
+          >
+            <Trash2 size={18} /> Delete
+          </button>
         </div>
       </header>
+
+      {actionSuccess && (
+        <div className="mb-4 flex items-center gap-3 px-5 py-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm font-medium">
+          <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+          {actionSuccess}
+        </div>
+      )}
+      {actionError && (
+        <div className="mb-4 flex items-center gap-3 px-5 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium">
+          <AlertCircle size={18} className="text-red-500 shrink-0" />
+          {actionError}
+        </div>
+      )}
 
       {/* Meta Card */}
       {!isEditing ? (
@@ -358,8 +444,14 @@ export default function EventDetailView() {
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">Event Type</label>
-              <select value={editForm.eventType || ''} onChange={(e: any) => setEditForm({...editForm, eventType: e.target.value})} className="w-full input-glow p-3 text-sm transition-all">
-                <option>Seminar</option><option>Workshop</option><option>Conference</option><option>Exhibition</option><option>Networking</option><option>Hands-on</option><option>Competition</option><option>Career Fair</option><option>Other</option>
+              <select value={editForm.eventType || 'seminar'} onChange={(e: any) => setEditForm({...editForm, eventType: e.target.value})} className="w-full input-glow p-3 text-sm transition-all">
+                <option value="seminar">Seminar</option>
+                <option value="workshop">Workshop</option>
+                <option value="conference">Conference</option>
+                <option value="networking">Networking</option>
+                <option value="competition">Competition</option>
+                <option value="career_fair">Career Fair</option>
+                <option value="other">Other</option>
               </select>
             </div>
             <div className="space-y-2">

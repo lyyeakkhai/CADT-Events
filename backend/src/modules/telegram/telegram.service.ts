@@ -151,31 +151,152 @@ export const sendTelegramToChat = async (chatId: string, message: string) => {
 };
 
 /**
- * Utility: broadcast to ALL users who have linked Telegram.
- * (Used for admin global announcements.)
+ * Public student-web origin for Telegram URL buttons.
+ * Telegram rejects localhost / http:// for inline buttons — only https:// works.
  */
-export const sendEventAlertToAll = async (message: string) => {
-  if (!bot) return;
+export function getPublicWebBase(): string {
+  const candidates = [
+    process.env.PUBLIC_WEB_URL,
+    process.env.FRONTEND_URL,
+    'https://cadt-events-web.onrender.com',
+  ];
+  for (const raw of candidates) {
+    const base = (raw || '').trim().replace(/\/$/, '');
+    if (/^https:\/\//i.test(base)) return base;
+  }
+  return 'https://cadt-events-web.onrender.com';
+}
 
+/**
+ * Utility: broadcast to ALL users who have linked Telegram.
+ * Used when admin publishes a new event (and for global announcements).
+ * Returns how many DMs were successfully sent.
+ */
+export const sendEventAlertToAll = async (
+  message: string,
+  options?: TelegramMessageOptions
+): Promise<number> => {
+  if (!bot) {
+    console.warn('[Telegram] Bot not configured — skip broadcast');
+    return 0;
+  }
+
+  let sent = 0;
   try {
     const linkedUsers = await prisma.userAccount.findMany({
       where: { telegram_chat_id: { not: null } },
       select: { telegram_chat_id: true },
     });
 
+    console.log(`[Telegram] Broadcasting to ${linkedUsers.length} linked user(s)...`);
+
     for (const u of linkedUsers) {
-      if (u.telegram_chat_id) {
-        try {
-          await bot.sendMessage(u.telegram_chat_id, message, { parse_mode: 'HTML' });
-        } catch (error) {
-          console.error(`Failed to send message to chatId ${u.telegram_chat_id}:`, error);
+      if (!u.telegram_chat_id) continue;
+      try {
+        const botOptions: any = { parse_mode: 'HTML' };
+        if (options?.buttonText && options?.buttonUrl) {
+          botOptions.reply_markup = {
+            inline_keyboard: [[{ text: options.buttonText, url: options.buttonUrl }]],
+          };
         }
+
+        if (options?.imageUrl) {
+          try {
+            await bot.sendPhoto(u.telegram_chat_id, options.imageUrl, {
+              caption: message,
+              parse_mode: 'HTML',
+              reply_markup: botOptions.reply_markup,
+            });
+          } catch (photoErr) {
+            // If image fails (bad URL etc.), still deliver text + button
+            console.warn(
+              `[Telegram] sendPhoto failed for ${u.telegram_chat_id}, falling back to text:`,
+              photoErr
+            );
+            await bot.sendMessage(u.telegram_chat_id, message, botOptions);
+          }
+        } else {
+          await bot.sendMessage(u.telegram_chat_id, message, botOptions);
+        }
+        sent += 1;
+      } catch (error) {
+        console.error(`Failed to send message to chatId ${u.telegram_chat_id}:`, error);
       }
     }
   } catch (error) {
     console.error('Error fetching users for Telegram broadcast:', error);
   }
+  console.log(`[Telegram] Broadcast complete: ${sent} sent`);
+  return sent;
 };
+
+export type PublishedEventNotifyInput = {
+  event_id: string;
+  event_title: string;
+  description?: string | null;
+  start_time: Date;
+  location?: string | null;
+  cover_image_url?: string | null;
+  event_type?: string | null;
+  capacity?: number | null;
+};
+
+/**
+ * Called when admin publishes an event (create as published, or draft → published).
+ * Sends cover image + caption + Register button to every linked Telegram user.
+ */
+export async function notifyUsersOfPublishedEvent(
+  event: PublishedEventNotifyInput,
+  trigger: 'create' | 'publish'
+): Promise<number> {
+  console.log(
+    `[Telegram] PUBLISH_NOTIFY trigger=${trigger} event_id=${event.event_id} title="${event.event_title}" cover=${event.cover_image_url ? 'yes' : 'no'}`
+  );
+
+  const webBase = getPublicWebBase();
+  const bookUrl = `${webBase}/events/${event.event_id}/seats`;
+
+  const when = event.start_time.toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+  const typeLabel = event.event_type
+    ? String(event.event_type).replace(/_/g, ' ')
+    : null;
+  const typeLine = typeLabel
+    ? typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)
+    : null;
+  const blurb = event.description
+    ? event.description.replace(/\s+/g, ' ').trim().slice(0, 180) +
+      (event.description.length > 180 ? '…' : '')
+    : null;
+
+  const message = [
+    `<b>CADT Events</b> · New publication`,
+    ``,
+    `<b>${event.event_title}</b>`,
+    typeLine ? `Type: ${typeLine}` : null,
+    `Date: ${when}`,
+    event.location ? `Location: ${event.location}` : null,
+    event.capacity != null ? `Capacity: ${event.capacity}` : null,
+    blurb ? `\n${blurb}` : null,
+    ``,
+    `Use the button below to register.`,
+  ]
+    .filter((line) => line !== null)
+    .join('\n');
+
+  const sent = await sendEventAlertToAll(message, {
+    imageUrl: event.cover_image_url || undefined,
+    buttonText: 'Register',
+    buttonUrl: bookUrl,
+  });
+
+  console.log(
+    `[Telegram] PUBLISH_NOTIFY done trigger=${trigger} event_id=${event.event_id} sent=${sent}`
+  );
+  return sent;
+}
 
 /**
  * Helper for booking confirmations etc. Pass the userId (clerk) + formatted message.

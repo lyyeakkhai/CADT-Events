@@ -2,6 +2,8 @@
 
 **Goal:** Get the full stack (Backend + User Frontend + Admin Frontend) running locally with zero friction.
 
+**Deploying a free student demo?** See [`docs/operations/deploy.md`](./docs/operations/deploy.md) (Render Blueprint + GitHub Actions CI).
+
 This guide is written so that an AI assistant (Claude, Grok, Cursor, etc.) can read it and successfully set up the project for you.
 
 ---

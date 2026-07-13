@@ -23,7 +23,7 @@ interface EventForm {
 const INITIAL: EventForm = {
   title: '',
   description: '',
-  eventType: 'Seminar',
+  eventType: 'seminar',
   startTimestamp: '',
   endTimestamp: '',
   location: '',
@@ -41,7 +41,7 @@ export default function CreateEventView() {
   const [form, setForm] = useState<EventForm>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -216,17 +216,26 @@ export default function CreateEventView() {
 
       const res = await apiClient.post('/events', payload);
       console.log('[CreateEvent] Success response:', res.data);
+      const createdId = res.data?.data?.id as string | undefined;
 
       // Clear cached file after successful creation
       setCoverImageFile(null);
       setLocalPreviewUrl('');
 
-      setSuccess(true);
+      const msg =
+        status === 'PUBLISHED'
+          ? 'Published! Students can see this event on Discover. Opening event page…'
+          : 'Saved as draft (not visible to students). Opening event page…';
+      setSuccess(msg);
       setForm(INITIAL);
       setTimeout(() => {
-        setSuccess(false);
-        onNavigate('dashboard');
-      }, 1800);
+        setSuccess(null);
+        if (createdId) {
+          _nav(`/events/${createdId}`);
+        } else {
+          onNavigate('dashboard');
+        }
+      }, 1600);
     } catch (err: any) {
       console.error('[CreateEvent] API Error:', err);
       if (err.response) {
@@ -241,7 +250,7 @@ export default function CreateEventView() {
   }
 
   return (
-    <div className="w-full px-6 py-6 fade-in max-w-7xl mx-auto">
+    <div className="w-full px-3 sm:px-6 py-4 sm:py-6 fade-in max-w-7xl mx-auto">
       <header className="mb-8">
         <nav className="flex items-center gap-2 text-sm text-slate-500 mb-3 font-medium">
           <button onClick={() => onNavigate('dashboard')} className="hover:text-amber-500 transition-colors">Admin Dashboard</button>
@@ -249,14 +258,17 @@ export default function CreateEventView() {
           <span className="text-amber-500 font-bold">Create New Event</span>
         </nav>
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Create New Event</h1>
-        <p className="text-slate-500 mt-2 text-base">Draft a new academic event, workshop, or seminar for the CADT community.</p>
+        <p className="text-slate-500 mt-2 text-base">
+          For demos: fill the form → <strong>Publish Event</strong> so students see it on the public site.
+          Use <strong>Save as Draft</strong> while preparing.
+        </p>
       </header>
 
       {/* Success toast */}
       {success && (
         <div className="mb-6 flex items-center gap-3 px-5 py-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-semibold text-sm shadow-sm animate-fade-in">
-          <CheckCircle2 size={20} className="text-emerald-500" />
-          Event created successfully! Redirecting to dashboard...
+          <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
+          {success}
         </div>
       )}
 
@@ -304,12 +316,13 @@ export default function CreateEventView() {
                   className="w-full input-glow p-3 text-sm transition-all appearance-none cursor-pointer"
                   style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundPosition: 'right 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
                 >
-                  <option>Seminar</option>
-                  <option>Workshop</option>
-                  <option>Conference</option>
-                  <option>Exhibition</option>
-                  <option>Networking</option>
-                  <option>Hands-on</option>
+                  <option value="seminar">Seminar</option>
+                  <option value="workshop">Workshop</option>
+                  <option value="conference">Conference</option>
+                  <option value="networking">Networking</option>
+                  <option value="competition">Competition</option>
+                  <option value="career_fair">Career Fair</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
             </div>

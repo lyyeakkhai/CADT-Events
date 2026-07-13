@@ -1,0 +1,99 @@
+# Render Blueprint — free-tier friendly demo deploy
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After connecting this repo in the Render dashboard:
+#   New → Blueprint → select this repo
+#
+# Free web services spin down after ~15 min idle (cold start ~30–60s).
+# Wake the API once before a live demo.
+
+services:
+  # ── Backend API (Express) ───────────────────────────────────────────
+  - type: web
+    name: cadt-events-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci --legacy-peer-deps && npx prisma generate && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT automatically — do not hardcode it
+      # Set these in the Render dashboard (or via env group) — do not commit secrets
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      # Point these at your Render static site URLs after first deploy
+      - key: FRONTEND_URL
+        sync: false
+      - key: ADMIN_URL
+        sync: false
+
+  # ── Student / user frontend (Vite static) ───────────────────────────
+  - type: web
+    name: cadt-events-web
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_ADMIN_URL
+        sync: false
+      - key: VITE_TELEGRAM_BOT_USERNAME
+        sync: false
+
+  # ── Admin frontend (Vite static) ────────────────────────────────────
+  - type: web
+    name: cadt-events-admin
+    runtime: static
+    plan: free
+    rootDir: frontend-admin
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_API_URL
+        sync: false

@@ -21,11 +21,17 @@ export default function EventCard({ event, onSelect }: EventCardProps) {
       <div>
         {/* Card Image — cleaner treatment */}
         <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-          <img 
-            src={event.image} 
-            alt={event.title} 
-            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] ${isCompleted ? 'grayscale-[0.35]' : ''}`} 
-          />
+          {event.image ? (
+            <img
+              src={event.image}
+              alt={event.title}
+              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02] ${isCompleted ? 'grayscale-[0.35]' : ''}`}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-100 flex items-center justify-center text-slate-400 text-xs font-semibold">
+              No image
+            </div>
+          )}
           <span className="absolute top-3 left-3 bg-white/95 text-[#0b2c6a] text-[10px] font-semibold tracking-[0.5px] px-2.5 py-0.5 rounded border border-white/60 shadow-sm">
             {event.badge}
           </span>

@@ -36,7 +36,7 @@ export default function ExportView() {
   }, []);
 
   return (
-    <div className="w-full px-6 py-6 fade-in max-w-7xl mx-auto">
+    <div className="w-full px-3 sm:px-6 py-4 sm:py-6 fade-in max-w-7xl mx-auto">
       <div className="mb-8">
         <nav className="flex items-center gap-2 text-sm text-slate-500 mb-3 font-medium">
           <button onClick={() => navigate('/')} className="hover:text-amber-500 transition-colors">Admin Dashboard</button>

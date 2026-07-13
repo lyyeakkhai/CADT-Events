@@ -44,15 +44,23 @@ export const initTelegramCron = () => {
           const timeStr = event.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const dateStr = event.start_time.toLocaleDateString();
           
-          const title = reminder.minutes_before >= 1440 
-            ? `🗓️ Tomorrow: ${event.event_title}` 
-            : `⏳ Starting Soon: ${event.event_title}`;
+          const heading =
+            reminder.minutes_before >= 1440
+              ? 'Event tomorrow'
+              : 'Event starting soon';
 
           console.log(`[Telegram Cron] Sending reminder to ${registrations.length} users for event ${event.event_id}`);
 
           for (const reg of registrations) {
-            const message = `<b>${title}</b>\n\nHi ${reg.user.full_name},\n\nThis is a friendly reminder that your event is starting at <b>${timeStr}</b> on <b>${dateStr}</b>.\n\n📍 Location: ${event.location || 'CADT Campus'}\n🪑 Seat: ${reg.seat_label || 'Any available seat'}\n\nPlease arrive a bit early. See you there!`;
-            
+            const message =
+              `<b>CADT Events</b> · ${heading}\n\n` +
+              `<b>${event.event_title}</b>\n` +
+              `Date: ${dateStr}\n` +
+              `Time: ${timeStr}\n` +
+              `Location: ${event.location || 'CADT Campus'}\n` +
+              `Seat: ${reg.seat_label || 'General admission'}\n\n` +
+              `Please arrive a few minutes early.`;
+
             await sendTelegramToUser(reg.user.user_id, message);
           }
         }
