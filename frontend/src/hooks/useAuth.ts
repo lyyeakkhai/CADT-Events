@@ -124,9 +124,10 @@ export function useAuth() {
   };
 
   // ── Derive role from Clerk metadata ─────────────────────────────────────
-  // Set publicMetadata.role = 'admin' on admin users in the Clerk dashboard.
-  const role = (user?.publicMetadata?.role as string) ?? 'student';
-  const isAdmin = role === 'admin';
+  // publicMetadata.role should be ADMIN | SUPER_ADMIN (or email allowlist on apps).
+  const role = String((user?.publicMetadata?.role as string) ?? 'student');
+  const isAdmin =
+    role.toUpperCase() === 'ADMIN' || role.toUpperCase() === 'SUPER_ADMIN';
 
   return {
     user,
