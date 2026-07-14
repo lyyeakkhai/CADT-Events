@@ -165,13 +165,29 @@ function MainApp() {
 
   useEffect(() => {
     if (user) {
-      const role = user.publicMetadata?.role as string;
+      const role = String(user.publicMetadata?.role || '').toUpperCase();
       const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-      
-      if (isAdmin) {
-        window.location.href = import.meta.env.VITE_ADMIN_URL || 'http://localhost:3000';
-        return;
+      const adminUrl = (import.meta.env.VITE_ADMIN_URL as string | undefined)?.replace(/\/$/, '');
+
+      // Only offer / send admins to admin portal when URL is a real production host.
+      // Never fall back to localhost in production (that breaks deploy + can loop).
+      // Admins can always open the admin site directly and sign in there
+      // (student + admin domains do not share Clerk cookies).
+      if (isAdmin && adminUrl && !adminUrl.includes('localhost')) {
+        // One-shot redirect to avoid tight loops if admin bounces back
+        const key = 'cadt_admin_redirect_once';
+        try {
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, '1');
+            window.location.replace(adminUrl);
+            return;
+          }
+        } catch {
+          window.location.replace(adminUrl);
+          return;
+        }
       }
+
       setActiveTab('Discover');
 
       // Show Telegram prompt shortly after first authenticated load (unless previously dismissed this browser)
