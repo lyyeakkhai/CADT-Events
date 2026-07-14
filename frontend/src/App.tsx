@@ -172,20 +172,11 @@ function MainApp() {
   });
   const adminPortalUrl = getAdminPortalUrl();
 
+  // Admins never stay on the student UI: hard-redirect immediately (no banner, no prompt).
+  // Clerk sessions are per-domain — they will sign in again on the admin origin.
   useEffect(() => {
     if (!user || !isAdmin || !adminPortalUrl) return;
-
-    // One-shot auto-open of admin portal per browser tab.
-    // Clerk sessions are NOT shared across domains — user must sign in again on admin.
-    // The always-visible "Open Admin Portal" button still works after this flag is set.
-    const key = 'cadt_admin_redirect_once';
-    try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, '1');
-      window.location.assign(adminPortalUrl);
-    } catch {
-      window.location.href = adminPortalUrl;
-    }
+    window.location.replace(adminPortalUrl);
   }, [user, isAdmin, adminPortalUrl]);
 
   useEffect(() => {
@@ -234,6 +225,38 @@ function MainApp() {
     setSelectedEvent(ev);
   };
 
+  // Do not paint student Discover/home for admins — redirect only.
+  if (isAdmin && adminPortalUrl) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-slate-900 border-t-transparent animate-spin" />
+          <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+            Redirecting to admin portal…
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAdmin && !adminPortalUrl) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-3">
+          <h1 className="text-lg font-bold text-slate-900">Admin portal URL not configured</h1>
+          <p className="text-sm text-slate-600">
+            Set <code className="bg-slate-100 px-1 rounded">VITE_ADMIN_URL</code> on the student
+            Vercel project to your admin origin (e.g.{' '}
+            <code className="bg-slate-100 px-1 rounded text-xs">
+              https://cadt-events-ytaz.vercel.app
+            </code>
+            ), then redeploy.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (bookingInfo) {
     return (
       <BookingConfirmed
@@ -258,48 +281,6 @@ function MainApp() {
         setActiveTab={handleNavTabChange}
         onProfileClick={() => {}}
       />
-
-      {/* Institutional context + always-visible admin portal entry */}
-      <div className="w-full bg-[#0b2c6a]/5 text-[#0b2c6a] px-4 sm:px-8 py-1.5 text-[10px] font-medium flex justify-between items-center border-b border-[#0b2c6a]/10 select-none gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="w-1 h-1 rounded-full bg-[#0b2c6a] opacity-60 shrink-0" />
-          <span className="truncate">
-            CADT Events — {isAdmin ? 'Admin account on student site' : 'Student Portal'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {isAdmin && adminPortalUrl && (
-            <a
-              href={adminPortalUrl}
-              className="text-[10px] font-bold uppercase tracking-wide bg-[#0b2c6a] text-white px-2.5 py-1 rounded-md hover:bg-[#082050] whitespace-nowrap"
-              title="Opens the admin app on a different domain — you will sign in again there"
-            >
-              Open Admin Portal →
-            </a>
-          )}
-          {isAdmin && !adminPortalUrl && (
-            <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-              Set VITE_ADMIN_URL on Vercel (student project), then redeploy
-            </span>
-          )}
-          <span className="text-[#0b2c6a]/60 text-[10px] truncate max-w-[180px] hidden sm:inline">
-            {user?.primaryEmailAddress?.emailAddress}
-          </span>
-        </div>
-      </div>
-      {isAdmin && adminPortalUrl && (
-        <div className="w-full bg-amber-50 border-b border-amber-200 px-4 sm:px-8 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <p className="text-xs text-amber-900 font-medium">
-            You have admin access. Manage events on the admin portal (separate login on that domain).
-          </p>
-          <a
-            href={adminPortalUrl}
-            className="inline-flex items-center justify-center text-xs font-bold uppercase tracking-wide bg-[#0b2c6a] text-white px-3 py-1.5 rounded-md hover:bg-[#082050] shrink-0"
-          >
-            Open Admin Portal →
-          </a>
-        </div>
-      )}
 
       {/* Page content */}
       <div className="flex-grow w-full flex flex-col">
