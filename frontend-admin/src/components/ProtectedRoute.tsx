@@ -1,89 +1,58 @@
-import React from 'react';
-import { SignIn, useUser } from '@clerk/clerk-react';
+import React, { useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { USER_FRONTEND_URL } from '../lib/urls';
 import { isAdminUser } from '../lib/adminAccess';
+import LoginView from '../views/LoginView';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 /**
- * Admin gate.
- * Important: do NOT bounce unauthenticated users to the student Vercel app.
- * Student + admin are different domains; Clerk sessions are not shared, so
- * redirecting student→admin→student/login→admin causes an infinite loop.
- * Sign in on this domain instead.
+ * Same Clerk login UI as student (LoginView).
+ * After sign-in: admins enter the portal; students are sent to the student site.
+ * Sign-in stays on the admin domain (no redirect loop across Vercel apps).
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isLoaded, isSignedIn, user } = useUser();
-
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-slate-500">
-        Checking authorization...
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 gap-6">
-        <div className="text-center text-white space-y-2 max-w-md">
-          <h1 className="text-2xl font-bold">CADT Events Admin</h1>
-          <p className="text-slate-400 text-sm">
-            Sign in with your teacher/admin account. This is separate from the student site
-            (different domain), so you may need to sign in again here.
-          </p>
-        </div>
-        <SignIn
-          routing="hash"
-          forceRedirectUrl="/"
-          signUpUrl={undefined}
-          appearance={{
-            elements: {
-              rootBox: 'mx-auto',
-            },
-          }}
-        />
-        <a
-          href={USER_FRONTEND_URL}
-          className="text-sm text-slate-400 hover:text-white underline"
-        >
-          ← Back to student site
-        </a>
-      </div>
-    );
-  }
 
   const role = user?.publicMetadata?.role as string | undefined;
   const email = user?.primaryEmailAddress?.emailAddress;
   const isAdmin = isAdminUser({ role, email });
 
+  // Student (or any non-admin) who opens admin URL → redirect to student frontend
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    if (isAdmin) return;
+    const target = USER_FRONTEND_URL || 'https://cadt-events.vercel.app';
+    window.location.replace(target);
+  }, [isLoaded, isSignedIn, isAdmin]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-slate-900 border-t-transparent animate-spin" />
+          <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <LoginView />;
+  }
+
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
-        <div className="bg-red-500/10 border border-red-500 p-6 rounded-lg max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-red-500 mb-4">Access Denied</h1>
-          <p className="mb-4">
-            You are signed in, but this account is not an admin. Set Clerk{' '}
-            <code className="text-amber-300">publicMetadata.role</code> to{' '}
-            <code className="text-amber-300">ADMIN</code>, or add your email to{' '}
-            <code className="text-amber-300">ADMIN_EMAILS</code> /{' '}
-            <code className="text-amber-300">VITE_ADMIN_EMAILS</code>.
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="text-center max-w-sm space-y-3">
+          <div className="w-8 h-8 mx-auto rounded-full border-2 border-slate-900 border-t-transparent animate-spin" />
+          <p className="text-sm font-medium text-slate-600">
+            This account is for students. Redirecting to the student portal…
           </p>
-
-          <div className="bg-black/50 p-4 rounded text-left font-mono text-sm mb-4">
-            <p className="text-gray-400 mb-2">DEBUG INFO:</p>
-            <p>Email: {email}</p>
-            <p>Role in Clerk: {role ? `"${role}"` : 'undefined (or null)'}</p>
-            <p>Public Metadata: {JSON.stringify(user.publicMetadata)}</p>
-          </div>
-
-          <a
-            href={USER_FRONTEND_URL}
-            className="inline-block bg-white text-black px-4 py-2 rounded font-medium hover:bg-gray-200"
-          >
-            Go back to Public Site
+          <a href={USER_FRONTEND_URL} className="text-sm font-semibold text-[#0b2c6a] underline">
+            Continue to student site
           </a>
         </div>
       </div>
