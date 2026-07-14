@@ -1,0 +1,12 @@
+import { PrismaClient } from '@prisma/client/index.js';
+
+// Attach Prisma to the global object in development to prevent connection exhaustion
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ['query', 'error', 'warn'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

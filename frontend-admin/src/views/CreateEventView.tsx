@@ -1,0 +1,683 @@
+import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '@clerk/clerk-react';
+import type { ViewType } from '../App';
+import axios from 'axios';
+import { ChevronRight, UploadCloud, Users, CheckCircle2, Circle, Send, Loader2, AlertCircle, Calendar as CalendarIcon, MapPin, Image as ImageIcon, Settings2, Info, X, Lightbulb } from 'lucide-react';
+import apiClient from '../lib/apiClient';
+
+interface EventForm {
+  title: string;
+  description: string;
+  eventType: string;
+  startTimestamp: string;
+  endTimestamp: string;
+  location: string;
+  coverImageUrl: string;
+  creditValue: number;
+  capacity: number | null;
+  isFeatured: boolean;
+  status: 'DRAFT' | 'PUBLISHED';
+}
+
+const INITIAL: EventForm = {
+  title: '',
+  description: '',
+  eventType: 'seminar',
+  startTimestamp: '',
+  endTimestamp: '',
+  location: '',
+  coverImageUrl: '',
+  creditValue: 0,
+  capacity: null,
+  isFeatured: false,
+  status: 'DRAFT',
+};
+
+export default function CreateEventView() {
+  const _nav = useNavigate();
+  const onNavigate = (v: string) => _nav(v === 'dashboard' ? '/' : '/' + v);
+  const { getToken } = useAuth();
+  const [form, setForm] = useState<EventForm>(INITIAL);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Hold the selected File locally. Only upload to Cloudinary on actual event creation (confirm first).
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string>('');
+
+  // Manage local preview URL (from File) + cleanup to avoid memory leaks
+  useEffect(() => {
+    if (coverImageFile) {
+      const url = URL.createObjectURL(coverImageFile);
+      setLocalPreviewUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+        setLocalPreviewUrl('');
+      };
+    } else {
+      setLocalPreviewUrl('');
+    }
+  }, [coverImageFile]);
+
+  // Effective preview URL: prefer local file preview, fall back to pasted/remote URL
+  const previewImageUrl = localPreviewUrl || form.coverImageUrl;
+
+  // Note: We deliberately cache the File object and only call Cloudinary on actual "Save/Publish".
+  // This avoids uploading images to Cloudinary for events the user never ends up creating.
+
+  const set = (key: keyof EventForm, val: string | number | boolean | null) =>
+    setForm(prev => ({ ...prev, [key]: val as any }));
+
+  // Real image upload to backend (/api/upload -> Cloudinary)
+  // Uses the main apiClient + explicit token from hook for reliability
+  async function uploadImageFile(file: File): Promise<string> {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Please select an image file (PNG, JPG, etc.)');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('Image too large. Max 5MB.');
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    // Get token from hook (reliable here) and attach explicitly; interceptor will also clean Content-Type
+    let token = null;
+    try {
+      token = await getToken({ skipCache: true });
+    } catch (e) {}
+    if (!token && window.Clerk && window.Clerk.session) {
+      try {
+        // @ts-expect-error
+        token = await window.Clerk.session.getToken({ skipCache: true });
+      } catch (e) {}
+    }
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    console.log('[Admin Upload] Sending /upload via apiClient with token from hook:', !!token, 'fallback:', !!(window.Clerk && window.Clerk.session), 'final headers:', config.headers);
+
+    const res = await apiClient.post('/upload', formData, config);
+    const uploadedUrl = res.data?.url || res.data?.secure_url;
+    if (!uploadedUrl) {
+      throw new Error('Upload succeeded but no URL returned from server');
+    }
+    return uploadedUrl as string;
+  }
+
+  // Cache the file locally. We only upload to Cloudinary when the user confirms by clicking Save/Publish.
+  function handleImageFileSelect(file: File) {
+    console.log('[Admin Upload] handleImageFileSelect (caching file, upload on confirm)', file.name, file.size);
+    setError(null);
+    setIsDragging(false);
+    setCoverImageFile(file);
+    // Clear any previously pasted remote URL when choosing a local file
+    set('coverImageUrl', '');
+  }
+
+  function triggerFilePicker() {
+    console.log('[Admin Upload] triggerFilePicker called');
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    } else {
+      console.error('[Admin Upload] fileInputRef is null');
+    }
+  }
+
+  function handleFileInputChange(e: any) {
+    console.log('[Admin Upload] file input change', e.target?.files);
+    const file = e.target?.files?.[0];
+    if (file) {
+      handleImageFileSelect(file);
+    }
+    // reset input so same file can be selected again
+    if (e.target) e.target.value = '';
+  }
+
+  // Drag & drop support
+  function handleDrop(e: any) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleImageFileSelect(file);
+  }
+
+  function handleDragOver(e: any) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: any) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    setIsDragging(false);
+  }
+
+  // Checklist
+  const hasTitle = form.title.trim().length >= 3;
+  const hasDescription = form.description.trim().length >= 10;
+  const hasStart = !!form.startTimestamp;
+  const hasLocation = !!form.location.trim();
+  const allReady = hasTitle && hasDescription && hasStart && hasLocation;
+
+  async function handleSubmit(status: 'DRAFT' | 'PUBLISHED') {
+    setError(null);
+    if (!allReady) {
+      setError('Please fill in all required fields (title, description, start date, location).');
+      return;
+    }
+
+    const start = new Date(form.startTimestamp);
+    const end = form.endTimestamp ? new Date(form.endTimestamp) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
+    try {
+      setSubmitting(true);
+      console.log('[CreateEvent] Starting submission with status:', status);
+
+      // Only upload to Cloudinary after user confirms "Create" (Save as Draft / Publish)
+      let finalCoverImageUrl = form.coverImageUrl || undefined;
+
+      if (coverImageFile) {
+        setUploadingImage(true);
+        try {
+          console.log('[Admin Upload] Uploading cached image to Cloudinary now (on create confirm)...');
+          finalCoverImageUrl = await uploadImageFile(coverImageFile);
+          console.log('[Admin Upload] Image uploaded on confirm, url=', finalCoverImageUrl);
+        } catch (err: any) {
+          const msg = err?.response?.data?.error || err?.message || 'Failed to upload image';
+          console.error('[CreateEvent] Image upload failed:', err);
+          setError(msg);
+          return; // do not create the event if image upload failed
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
+      const payload = {
+        title: form.title,
+        description: form.description,
+        eventType: form.eventType,
+        startTimestamp: start.toISOString(),
+        endTimestamp: end.toISOString(),
+        location: form.location,
+        coverImageUrl: finalCoverImageUrl,
+        creditValue: form.creditValue,
+        capacity: form.capacity || undefined,
+        isFeatured: form.isFeatured,
+        status,
+      };
+      
+      console.log('[CreateEvent] Sending POST /events with payload:', payload);
+
+      const res = await apiClient.post('/events', payload);
+      console.log('[CreateEvent] Success response:', res.data);
+      const createdId = res.data?.data?.id as string | undefined;
+
+      // Clear cached file after successful creation
+      setCoverImageFile(null);
+      setLocalPreviewUrl('');
+
+      const msg =
+        status === 'PUBLISHED'
+          ? 'Published! Students can see this event on Discover. Opening event page…'
+          : 'Saved as draft (not visible to students). Opening event page…';
+      setSuccess(msg);
+      setForm(INITIAL);
+      setTimeout(() => {
+        setSuccess(null);
+        if (createdId) {
+          _nav(`/events/${createdId}`);
+        } else {
+          onNavigate('dashboard');
+        }
+      }, 1600);
+    } catch (err: any) {
+      console.error('[CreateEvent] API Error:', err);
+      if (err.response) {
+        console.error('[CreateEvent] Error response data:', err.response.data);
+      }
+      const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? 'Failed to create event';
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+      setUploadingImage(false);
+    }
+  }
+
+  return (
+    <div className="w-full px-3 sm:px-6 py-4 sm:py-6 fade-in max-w-7xl mx-auto">
+      <header className="mb-8">
+        <nav className="flex items-center gap-2 text-sm text-slate-500 mb-3 font-medium">
+          <button onClick={() => onNavigate('dashboard')} className="hover:text-amber-500 transition-colors">Admin Dashboard</button>
+          <ChevronRight size={14} className="text-slate-400" />
+          <span className="text-amber-500 font-bold">Create New Event</span>
+        </nav>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Create New Event</h1>
+        <p className="text-slate-500 mt-2 text-base">
+          For demos: fill the form → <strong>Publish Event</strong> so students see it on the public site.
+          Use <strong>Save as Draft</strong> while preparing.
+        </p>
+      </header>
+
+      {/* Success toast */}
+      {success && (
+        <div className="mb-6 flex items-center gap-3 px-5 py-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-semibold text-sm shadow-sm animate-fade-in">
+          <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
+          {success}
+        </div>
+      )}
+
+      {/* Error toast */}
+      {error && (
+        <div className="mb-6 flex items-center gap-3 px-5 py-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium shadow-sm animate-fade-in">
+          <AlertCircle size={20} className="text-red-500 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        <form className="xl:col-span-8 space-y-6" onSubmit={e => e.preventDefault()}>
+
+          {/* Basic Information */}
+          <section className="glass-card p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-amber-100 text-amber-600 rounded-lg">
+                <Info size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Basic Information</h2>
+                <p className="text-sm text-slate-500">The core details of your event.</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Event Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={e => set('title', (e.target as HTMLInputElement).value)}
+                  placeholder="e.g. Next-Gen AI Workshop 2024"
+                  className="w-full input-glow p-3 text-sm transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Event Type</label>
+                <select
+                  value={form.eventType}
+                  onChange={e => set('eventType', (e.target as HTMLSelectElement).value)}
+                  className="w-full input-glow p-3 text-sm transition-all appearance-none cursor-pointer"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundPosition: 'right 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '16px' }}
+                >
+                  <option value="seminar">Seminar</option>
+                  <option value="workshop">Workshop</option>
+                  <option value="conference">Conference</option>
+                  <option value="networking">Networking</option>
+                  <option value="competition">Competition</option>
+                  <option value="career_fair">Career Fair</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Schedule & Location */}
+          <section className="glass-card p-6 md:p-8">
+             <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-blue-100 text-blue-600 rounded-lg">
+                <CalendarIcon size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Schedule &amp; Location</h2>
+                <p className="text-sm text-slate-500">When and where is it happening?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Start Date &amp; Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={form.startTimestamp}
+                  onChange={e => set('startTimestamp', (e.target as HTMLInputElement).value)}
+                  className="w-full input-glow p-3 text-sm transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">End Date &amp; Time</label>
+                <input
+                  type="datetime-local"
+                  value={form.endTimestamp}
+                  onChange={e => set('endTimestamp', (e.target as HTMLInputElement).value)}
+                  className="w-full input-glow p-3 text-sm transition-all"
+                />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Venue / Location <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={e => set('location', (e.target as HTMLInputElement).value)}
+                    placeholder="e.g. Main Auditorium, Innovation Hub, Online"
+                    className="w-full input-glow p-3 pl-10 text-sm transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Event Details */}
+          <section className="glass-card p-6 md:p-8">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-slate-900">Event Description <span className="text-red-500">*</span></h2>
+              <p className="text-sm text-slate-500 mt-1">Provide a detailed overview of the event's goals, schedule, and expected outcomes.</p>
+            </div>
+            <textarea
+              rows={6}
+              value={form.description}
+              onChange={e => set('description', (e.target as HTMLTextAreaElement).value)}
+              placeholder="Write your event description here..."
+              className="w-full input-glow p-4 text-sm transition-all resize-y leading-relaxed"
+            />
+          </section>
+
+          {/* Event Media */}
+          <section className="glass-card p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-lg">
+                <ImageIcon size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Event Media</h2>
+                <p className="text-sm text-slate-500">Upload a cover image to make your event stand out.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Cover Image URL</label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={form.coverImageUrl}
+                    onChange={e => {
+                      const val = (e.target as HTMLInputElement).value;
+                      set('coverImageUrl', val);
+                      if (val) {
+                        // User pasted a remote URL → discard any pending local file
+                        setCoverImageFile(null);
+                      }
+                    }}
+                    placeholder="https://... (paste image URL)"
+                    className="flex-1 input-glow p-3 text-sm transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={triggerFilePicker}
+                    disabled={uploadingImage}
+                    className="px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {uploadingImage ? <Loader2 className="animate-spin" size={16} /> : <UploadCloud size={16} />}
+                    Upload
+                  </button>
+                </div>
+                {/* Hidden file input used by the upload area + Change button */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileInputChange}
+                />
+              </div>
+              
+              {!previewImageUrl && (
+                <div
+                  onClick={triggerFilePicker}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer group ${
+                    isDragging 
+                      ? 'border-amber-500 bg-amber-50 scale-[1.01]' 
+                      : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-amber-400'
+                  }`}
+                >
+                  {uploadingImage ? (
+                    <div className="flex flex-col items-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-amber-500 mb-3" />
+                      <p className="text-sm text-slate-600 font-medium">Uploading image...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 bg-white shadow-sm rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                        <UploadCloud className="text-slate-400 group-hover:text-amber-500 transition-colors" size={24} />
+                      </div>
+                      <p className="text-sm text-slate-700 font-semibold mb-1">Drag and drop image here</p>
+                      <p className="text-xs text-slate-500">or use the Upload button above</p>
+                      <p className="text-xs text-slate-500">PNG, JPG, WEBP or GIF (max 5MB)</p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {previewImageUrl && (
+                <div className="relative mt-4 rounded-xl overflow-hidden border border-slate-200 h-64 bg-slate-100 group">
+                  <img src={previewImageUrl} alt="preview" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onError={(e: any) => { e.target.style.display = 'none'; }} />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={triggerFilePicker}
+                      disabled={uploadingImage}
+                      className="px-4 py-2 bg-white text-slate-900 text-sm font-bold rounded-lg shadow-lg hover:bg-amber-50 transition-colors flex items-center gap-2"
+                    >
+                      <UploadCloud size={16} /> Change Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoverImageFile(null);
+                        set('coverImageUrl', '');
+                      }}
+                      className="px-4 py-2 bg-white/90 text-slate-900 text-sm font-bold rounded-lg shadow-lg hover:bg-red-50 hover:text-red-600 transition-colors flex items-center gap-1.5"
+                    >
+                      <X size={16} /> Remove
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Settings */}
+          <section className="glass-card p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 bg-purple-100 text-purple-600 rounded-lg">
+                <Settings2 size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Advanced Settings</h2>
+                <p className="text-sm text-slate-500">Configure credits and visibility.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Credit Value (on attendance)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.creditValue}
+                    onChange={e => set('creditValue', Number((e.target as HTMLInputElement).value))}
+                    className="w-full input-glow p-3 pr-10 text-sm transition-all"
+                  />
+                  <Users className="absolute right-3 top-3 text-slate-400" size={18} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Total Capacity (seats)</label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 100"
+                  value={form.capacity ?? ''}
+                  onChange={e => set('capacity', (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : null)}
+                  className="w-full input-glow p-3 text-sm transition-all"
+                />
+                <p className="text-[11px] text-slate-500">Leave empty for unlimited</p>
+              </div>
+              
+              <div className="pt-1 md:col-span-2">
+                <label className="flex items-center gap-3 cursor-pointer group p-3 border border-slate-200 rounded-xl hover:border-amber-400 hover:bg-amber-50/50 transition-colors">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={form.isFeatured}
+                      onChange={e => set('isFeatured', (e.target as HTMLInputElement).checked)}
+                      className="peer sr-only"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-800">Feature on homepage</div>
+                    <div className="text-xs text-slate-500">Highlight this event in the hero section</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          {/* Submit buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 pt-4 pb-12">
+             <button
+              type="button"
+              disabled={submitting}
+              onClick={() => handleSubmit('DRAFT')}
+              className="flex-1 px-6 py-3.5 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-all text-center disabled:opacity-50"
+            >
+              {submitting ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'Save as Draft'}
+            </button>
+            <button
+              type="button"
+              disabled={submitting || !allReady}
+              onClick={() => handleSubmit('PUBLISHED')}
+              className="flex-[2] px-6 py-3.5 bg-amber-500 text-white font-bold rounded-xl shadow-md hover:bg-amber-600 hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? <Loader2 className="animate-spin" size={20} /> : <><Send size={18} /> Publish Event</>}
+            </button>
+          </div>
+        </form>
+
+        {/* Sidebar: Preview + Checklist */}
+        <aside className="xl:col-span-4 space-y-6 sticky top-24">
+          
+          {/* Publication Checklist */}
+          <div className="glass-card p-6">
+            <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
+               Checklist
+            </h4>
+            <ul className="space-y-4">
+              {[
+                { label: 'Event Title (min 3 chars)', done: hasTitle },
+                { label: 'Description (min 10 chars)', done: hasDescription },
+                { label: 'Start Date & Time', done: hasStart },
+                { label: 'Venue / Location', done: hasLocation },
+                { label: 'Cover Image (optional)', done: !!previewImageUrl, isOptional: true },
+                { label: 'Capacity (optional)', done: !!form.capacity, isOptional: true },
+              ].map(({ label, done, isOptional }) => (
+                <li key={label} className={`flex items-start gap-3 text-sm ${done ? 'text-slate-900' : 'text-slate-500'}`}>
+                  {done ? (
+                    <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                  ) : (
+                    <Circle size={18} className="text-slate-300 shrink-0 mt-0.5" />
+                  )}
+                  <span className={done ? 'font-medium' : ''}>
+                    {label} {isOptional && !done && <span className="text-xs text-slate-400 font-normal ml-1">(Optional)</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            
+            <div className="mt-6 pt-5 border-t border-slate-100">
+               <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-4">
+                  <h4 className="font-bold text-amber-800 mb-1.5 text-sm flex items-center gap-1.5">
+                    <Lightbulb size={18} className="text-amber-600" /> Pro-Tip
+                  </h4>
+                  <p className="text-amber-700/80 text-xs leading-relaxed font-medium">
+                    Events with high-resolution cover images and detailed descriptions see a <strong className="text-amber-800">40% higher</strong> registration rate.
+                  </p>
+                </div>
+            </div>
+          </div>
+
+          {/* Live preview card */}
+          <div className="glass-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live Preview</span>
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            </div>
+            <div className="h-40 relative bg-slate-100">
+              {previewImageUrl ? (
+                <img src={previewImageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e: any) => { e.target.style.display = 'none'; }} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                   <ImageIcon size={32} className="text-slate-300" />
+                </div>
+              )}
+              {form.eventType && (
+                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur text-slate-900 text-xs font-bold px-2.5 py-1 rounded-md shadow-sm">
+                  {form.eventType}
+                </div>
+              )}
+            </div>
+            <div className="p-5 space-y-4">
+              <h3 className="text-base font-bold text-slate-900 leading-snug line-clamp-2">
+                {form.title || 'Your Event Title Here'}
+              </h3>
+              
+              <div className="space-y-2.5">
+                <div className="flex items-start gap-2.5 text-sm">
+                  <CalendarIcon size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-slate-600 font-medium leading-tight">
+                     {form.startTimestamp ? new Date(form.startTimestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not Scheduled Yet'}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2.5 text-sm">
+                  <MapPin size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-slate-600 font-medium leading-tight">
+                     {form.location || 'No Venue Selected'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-slate-100">
+                <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">
+                  {form.description || 'Description will appear here as you type...'}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+        </aside>
+      </div>
+    </div>
+  );
+}

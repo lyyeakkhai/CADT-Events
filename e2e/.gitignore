@@ -1,0 +1,6 @@
+.env*
+!.env.example
+screenshots/
+screenshots-*/
+test-results/
+playwright-report/

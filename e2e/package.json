@@ -1,0 +1,13 @@
+{
+  "name": "cadt-events-e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:booking": "playwright test tests/booking-flow.spec.ts",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report playwright-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
