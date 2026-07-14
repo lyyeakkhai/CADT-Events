@@ -1,5 +1,8 @@
 /**
  * Admin detection — keep in sync with student `adminRole.ts` and backend ADMIN_EMAILS.
+ *
+ * Sessions are per-origin: student login does not authenticate this app.
+ * Only signed-in admins stay; signed-in students are sent to the student site.
  */
 
 const DEFAULT_ADMIN_EMAILS = [
@@ -15,15 +18,16 @@ function parseEmailList(raw?: string | null): string[] {
     .filter((e) => e.includes('@'));
 }
 
+/** Merge env allowlist with safe defaults (env never fully replaces defaults). */
 export function getAdminEmails(): string[] {
   const fromEnv = parseEmailList(import.meta.env.VITE_ADMIN_EMAILS as string | undefined);
-  return Array.from(new Set([...DEFAULT_ADMIN_EMAILS, ...fromEnv]));
+  return Array.from(new Set([...DEFAULT_ADMIN_EMAILS.map((e) => e.toLowerCase()), ...fromEnv]));
 }
 
 export function isAdminRoleValue(role: unknown): boolean {
   if (role == null) return false;
   // Handle string, or accidental { role: "ADMIN" }
-  let r = role;
+  let r: unknown = role;
   if (typeof role === 'object' && role !== null && 'role' in (role as object)) {
     r = (role as { role: unknown }).role;
   }
@@ -32,9 +36,7 @@ export function isAdminRoleValue(role: unknown): boolean {
     s === 'ADMIN' ||
     s === 'SUPER_ADMIN' ||
     s === 'SUPERADMIN' ||
-    s === 'ADMINISTRATOR' ||
-    s === 'TEACHER' ||
-    s === 'ORGANIZER'
+    s === 'ADMINISTRATOR'
   );
 }
 
@@ -52,16 +54,22 @@ export function collectUserEmails(user: {
   return Array.from(set);
 }
 
+export type AdminUserLike = {
+  primaryEmailAddress?: { emailAddress?: string | null } | null;
+  emailAddresses?: Array<{ emailAddress?: string | null }> | null;
+  publicMetadata?: Record<string, unknown> | null;
+  unsafeMetadata?: Record<string, unknown> | null;
+} | null;
+
+/**
+ * True if role is admin OR any linked email is on the allowlist.
+ * Checks all Clerk emails + common metadata keys.
+ */
 export function isAdminUser(opts: {
   role?: string | null;
   email?: string | null;
   emails?: string[] | null;
-  user?: {
-    primaryEmailAddress?: { emailAddress?: string | null } | null;
-    emailAddresses?: Array<{ emailAddress?: string | null }> | null;
-    publicMetadata?: Record<string, unknown> | null;
-    unsafeMetadata?: Record<string, unknown> | null;
-  } | null;
+  user?: AdminUserLike;
 }): boolean {
   const meta = opts.user?.publicMetadata || {};
   const unsafe = opts.user?.unsafeMetadata || {};

@@ -105,6 +105,10 @@ export default function LoginView() {
           <p className="mt-8 text-xs font-medium text-slate-400 text-center max-w-xs leading-relaxed">
             By signing in, you agree to the CADT Events Terms of Service and Privacy Policy.
           </p>
+          <p className="mt-3 text-[11px] text-slate-400 text-center max-w-sm leading-relaxed">
+            Admin uses a separate domain from the student app. Even if you already signed in on the
+            student site, sign in again here.
+          </p>
 
           <a
             href={USER_FRONTEND_URL}

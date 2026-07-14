@@ -44,11 +44,17 @@ clerkWebhookRouter.post('/', bodyParser.raw({ type: 'application/json' }), async
   const eventType = evt.type;
 
   if (eventType === 'user.created' || eventType === 'user.updated') {
-    const email = evt.data.email_addresses?.[0]?.email_address as string | undefined;
+    const emailList: string[] = (evt.data.email_addresses || [])
+      .map((e: { email_address?: string }) => e?.email_address)
+      .filter(Boolean);
+    const email =
+      emailList[0] ||
+      (evt.data.email_addresses?.[0]?.email_address as string | undefined);
     const name = `${evt.data.first_name || ''} ${evt.data.last_name || ''}`.trim();
 
     // ADMIN_EMAILS env (comma-separated) — see backend/.env.example
-    const role = isAdminEmail(email) ? 'ADMIN' : 'STUDENT';
+    // Check all linked emails, not only the first address.
+    const role = emailList.some((e) => isAdminEmail(e)) || isAdminEmail(email) ? 'ADMIN' : 'STUDENT';
 
     try {
       if (email) {

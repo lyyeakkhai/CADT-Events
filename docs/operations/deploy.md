@@ -124,9 +124,10 @@ npm run start:prod     # prisma migrate deploy && node dist/server.js
 
 | Variable | Example |
 |----------|---------|
-| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_…` |
-| `VITE_API_URL` | `https://cadt-events-api.onrender.com/api` |
-| `VITE_ADMIN_URL` | `https://cadt-events-admin.vercel.app` |
+| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_…` (same Clerk app as admin) |
+| `VITE_API_URL` | `https://cadt-events.onrender.com/api` |
+| `VITE_ADMIN_URL` | `https://cadt-events-ytaz.vercel.app` |
+| `VITE_ADMIN_EMAILS` | `yeakkhai.ly@student.cadt.edu.kh` (merged with code defaults) |
 | `VITE_TELEGRAM_BOT_USERNAME` | bot username without `@` |
 
 6. Deploy → copy production URL → set Render `FRONTEND_URL` / `PUBLIC_WEB_URL`.
@@ -139,13 +140,27 @@ npm run start:prod     # prisma migrate deploy && node dist/server.js
 
 | Variable | Example |
 |----------|---------|
-| `VITE_CLERK_PUBLISHABLE_KEY` | same Clerk pk |
-| `VITE_API_URL` | `https://cadt-events-api.onrender.com/api` |
-| `VITE_USER_FRONTEND_URL` | student Vercel URL (redirects / sign-out) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | same Clerk pk as student |
+| `VITE_API_URL` | `https://cadt-events.onrender.com/api` |
+| `VITE_USER_FRONTEND_URL` | `https://cadt-events.vercel.app` (non-admin redirect only) |
+| `VITE_ADMIN_EMAILS` | `yeakkhai.ly@student.cadt.edu.kh` |
 
 4. Deploy → set Render `ADMIN_URL` to this URL.
 
 > `VITE_*` vars are baked in at **build** time. Change them → redeploy Vercel project.
+
+### Dual-domain auth (important)
+
+Student (`cadt-events.vercel.app`) and admin (`cadt-events-ytaz.vercel.app`) are **different origins**. Clerk sessions are **not** shared.
+
+| Who | Where they log in | Expected |
+|-----|-------------------|----------|
+| Student | Student site | Stays on student app |
+| Admin | Student site | Sees **Open Admin Portal** → opens admin URL → **signs in again** on admin domain |
+| Admin | Admin site | Stays on admin dashboard |
+| Student | Admin site | After sign-in, redirected to student site (with short explanation) |
+
+Do **not** send unauthenticated admin visitors to the student `/login` URL — that caused redirect loops.
 
 ---
 
@@ -161,13 +176,13 @@ npm run start:prod     # prisma migrate deploy && node dist/server.js
 ## 5. Typical production URLs
 
 ```text
-API:    https://cadt-events-api.onrender.com
-Web:    https://<student-project>.vercel.app
-Admin:  https://<admin-project>.vercel.app
-Health: https://cadt-events-api.onrender.com/api/health
+API:    https://cadt-events.onrender.com
+Web:    https://cadt-events.vercel.app
+Admin:  https://cadt-events-ytaz.vercel.app
+Health: https://cadt-events.onrender.com/api/health
 ```
 
-(Exact Vercel hostnames depend on project names.)
+(If your Render service was renamed, use that host; keep student/admin CORS origins exact.)
 
 ---
 
@@ -213,8 +228,11 @@ Env templates: each package’s `.env.example` only — never commit real `.env`
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | CORS errors from Vercel → API | `FRONTEND_URL` / `ADMIN_URL` wrong on Render | Set exact Vercel origins, redeploy API |
-| Frontend calls wrong API | Stale `VITE_API_URL` | Set on Vercel, **redeploy** frontend |
-| 401 everywhere | Clerk key mismatch | Same Clerk app on all three surfaces |
+| Frontend calls wrong API / localhost | Stale or missing `VITE_API_URL` | Set on Vercel, **redeploy** frontend |
+| Admin bounces to student after login | Missing `publicMetadata.role=ADMIN` and email not on allowlist | Clerk public metadata + `VITE_ADMIN_EMAILS` / Render `ADMIN_EMAILS`, redeploy |
+| Admin login loops with student site | Unauth admin users sent to student `/login` | Use on-domain admin LoginView (current code); set `afterSignOutUrl="/"` on admin |
+| Admin opens student site and stays there | Missing `VITE_ADMIN_URL` on student Vercel | Set admin origin, redeploy student project |
+| 401 on admin API | Clerk key mismatch or role not ADMIN | Same Clerk app; set role ADMIN; allowlist email |
 | Migrate fail on Render | Bad `DIRECT_URL` | Use session/direct Supabase URL |
 | Cold start timeout | Free Render sleep | Hit `/api/health` once before demo |
 | SPA 404 on refresh | Missing rewrite | Ensure `vercel.json` rewrites present |

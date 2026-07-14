@@ -1,5 +1,9 @@
 /**
- * Admin detection for the student app — keep in sync with frontend-admin adminAccess.ts
+ * Admin detection for the student app.
+ * Keep in sync with frontend-admin/src/lib/adminAccess.ts and backend ADMIN_EMAILS.
+ *
+ * Clerk sessions are NOT shared across student and admin domains.
+ * Detecting admin here only drives "Open Admin Portal" — user must sign in again on admin.
  */
 
 const DEFAULT_ADMIN_EMAILS = [
@@ -10,39 +14,93 @@ const DEFAULT_ADMIN_EMAILS = [
 function parseEmailList(raw?: string | null): string[] {
   if (!raw) return [];
   return raw
-    .split(',')
+    .split(/[,;\s]+/)
     .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+    .filter((e) => e.includes('@'));
 }
 
+/** Merge env allowlist with safe defaults (env never fully replaces defaults). */
 export function getAdminEmails(): string[] {
   const fromEnv = parseEmailList(import.meta.env.VITE_ADMIN_EMAILS as string | undefined);
-  const merged = new Set<string>([...DEFAULT_ADMIN_EMAILS, ...fromEnv]);
-  return Array.from(merged);
+  return Array.from(new Set([...DEFAULT_ADMIN_EMAILS.map((e) => e.toLowerCase()), ...fromEnv]));
 }
 
 export function isAdminRoleValue(role: unknown): boolean {
   if (role == null) return false;
-  const r = String(role).trim().toUpperCase();
-  return r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'ADMINISTRATOR';
+  // Handle accidental nested { role: "ADMIN" }
+  let r: unknown = role;
+  if (typeof role === 'object' && role !== null && 'role' in (role as object)) {
+    r = (role as { role: unknown }).role;
+  }
+  const s = String(r).trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return s === 'ADMIN' || s === 'SUPER_ADMIN' || s === 'SUPERADMIN' || s === 'ADMINISTRATOR';
 }
 
+export function collectUserEmails(user: {
+  primaryEmailAddress?: { emailAddress?: string | null } | null;
+  emailAddresses?: Array<{ emailAddress?: string | null }> | null;
+} | null | undefined): string[] {
+  if (!user) return [];
+  const set = new Set<string>();
+  const primary = user.primaryEmailAddress?.emailAddress;
+  if (primary) set.add(primary.trim().toLowerCase());
+  for (const e of user.emailAddresses || []) {
+    if (e?.emailAddress) set.add(e.emailAddress.trim().toLowerCase());
+  }
+  return Array.from(set);
+}
+
+export type AdminUserLike = {
+  primaryEmailAddress?: { emailAddress?: string | null } | null;
+  emailAddresses?: Array<{ emailAddress?: string | null }> | null;
+  publicMetadata?: Record<string, unknown> | null;
+  unsafeMetadata?: Record<string, unknown> | null;
+} | null;
+
+/**
+ * True if role is admin OR any linked email is on the allowlist.
+ * Checks all Clerk emails + common metadata keys.
+ */
 export function isAdminAccount(opts: {
   role?: string | null;
   email?: string | null;
   emails?: string[] | null;
+  user?: AdminUserLike;
 }): boolean {
-  if (isAdminRoleValue(opts.role)) return true;
+  const meta = opts.user?.publicMetadata || {};
+  const unsafe = opts.user?.unsafeMetadata || {};
+
+  const roleCandidates = [
+    opts.role,
+    meta.role,
+    meta.Role,
+    meta.userRole,
+    meta.admin_role,
+    unsafe.role,
+  ];
+  if (roleCandidates.some(isAdminRoleValue)) return true;
+
+  if (meta.isAdmin === true || meta.admin === true || unsafe.isAdmin === true) return true;
+
   const allow = getAdminEmails();
-  const candidates = [
-    opts.email,
-    ...(opts.emails || []),
-  ]
-    .filter(Boolean)
-    .map((e) => String(e).trim().toLowerCase());
-  return candidates.some((e) => allow.includes(e));
+  const emails = new Set<string>();
+  if (opts.email) emails.add(String(opts.email).trim().toLowerCase());
+  for (const e of opts.emails || []) emails.add(String(e).trim().toLowerCase());
+  for (const e of collectUserEmails(opts.user)) emails.add(e);
+
+  for (const e of emails) {
+    if (allow.includes(e)) return true;
+  }
+  return false;
 }
 
+/** Alias for parity with frontend-admin adminAccess.isAdminUser */
+export const isAdminUser = isAdminAccount;
+
+/**
+ * Production admin origin only. Localhost is ignored so student never
+ * auto-redirects to a local admin during demos.
+ */
 export function getAdminPortalUrl(): string | null {
   const raw = (import.meta.env.VITE_ADMIN_URL as string | undefined)?.trim();
   if (!raw) return null;

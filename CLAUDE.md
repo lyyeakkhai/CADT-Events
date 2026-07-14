@@ -20,19 +20,20 @@ Always `cd` into the package before `npm install` / `npm run *`.
 | Admin web | **Vercel** (root dir `frontend-admin/`) |
 | CI | **GitHub Actions** (`.github/workflows/ci.yml`) |
 
-- Production URL (API): `https://cadt-events-api.onrender.com`
-- Production URL (web): Vercel student project URL (set after first Vercel deploy)
-- Production URL (admin): Vercel admin project URL
+- Production URL (API): `https://cadt-events.onrender.com`
+- Production URL (web): `https://cadt-events.vercel.app`
+- Production URL (admin): `https://cadt-events-ytaz.vercel.app`
 - Deploy workflow: push to `main` → CI build; Render + Vercel auto-deploy connected projects
-- Post-deploy health check: `https://cadt-events-api.onrender.com/api/health`
+- Post-deploy health check: `https://cadt-events.onrender.com/api/health`
 - CORS: set Render `FRONTEND_URL` / `ADMIN_URL` to the two Vercel origins
+- Dual-domain auth: Clerk sessions are **not** shared across student vs admin hosts — admins re-sign-in on admin
 
 ### Custom deploy hooks
 
 - Pre-merge / push: GitHub Actions CI — lint (non-blocking) + **build** all three packages
 - CD API: Render auto-deploy on push to connected branch
 - CD web/admin: Vercel auto-deploy per project
-- Health check: `curl -sf https://cadt-events-api.onrender.com/api/health`
+- Health check: `curl -sf https://cadt-events.onrender.com/api/health`
 
 ### Deploy docs
 
