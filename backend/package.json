@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "start:prod": "prisma migrate deploy && node dist/server.js",
     "lint": "eslint src/",
-    "postinstall": "prisma generate"
+    "postinstall": "npx prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -31,7 +31,10 @@
     "node-cron": "^4.6.0",
     "node-telegram-bot-api": "^1.1.2",
     "pino": "^10.3.1",
+    "prisma": "^5.12.1",
     "svix": "^1.96.1",
+    "tsc-alias": "^1.9.0",
+    "typescript": "^6.0.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -48,11 +51,8 @@
     "dotenv-cli": "^11.0.0",
     "eslint": "^10.4.0",
     "nodemon": "^3.1.14",
-    "prisma": "^5.12.1",
     "ts-node": "^10.9.2",
-    "tsc-alias": "^1.9.0",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4"
   }
 }
