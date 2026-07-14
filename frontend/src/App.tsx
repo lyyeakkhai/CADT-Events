@@ -166,15 +166,12 @@ function MainApp() {
   useEffect(() => {
     if (user) {
       const role = String(user.publicMetadata?.role || '').toUpperCase();
-      const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+      const isAdminRole = role === 'ADMIN' || role === 'SUPER_ADMIN';
       const adminUrl = (import.meta.env.VITE_ADMIN_URL as string | undefined)?.replace(/\/$/, '');
 
-      // Only offer / send admins to admin portal when URL is a real production host.
-      // Never fall back to localhost in production (that breaks deploy + can loop).
-      // Admins can always open the admin site directly and sign in there
-      // (student + admin domains do not share Clerk cookies).
-      if (isAdmin && adminUrl && !adminUrl.includes('localhost')) {
-        // One-shot redirect to avoid tight loops if admin bounces back
+      // Admins who land on the student site: send them to admin portal (production URL only).
+      // They sign in again on the admin domain (Clerk cookies are not shared across Vercel apps).
+      if (isAdminRole && adminUrl && !/localhost|127\.0\.0\.1/i.test(adminUrl)) {
         const key = 'cadt_admin_redirect_once';
         try {
           if (!sessionStorage.getItem(key)) {
@@ -193,7 +190,7 @@ function MainApp() {
       // Show Telegram prompt shortly after first authenticated load (unless previously dismissed this browser)
       try {
         const dismissed = localStorage.getItem('telegramPromptDismissed');
-        if (!dismissed) {
+        if (!dismissed && !isAdminRole) {
           const t = setTimeout(() => setShowTelegramPrompt(true), 1400);
           return () => clearTimeout(t);
         }
@@ -207,7 +204,10 @@ function MainApp() {
     return () => document.removeEventListener('open-telegram-prompt', handleOpenPrompt);
   }, []);
 
-  const isAdmin = (user?.publicMetadata?.role as string) === 'admin';
+  const isAdmin = (() => {
+    const r = String(user?.publicMetadata?.role || '').toUpperCase();
+    return r === 'ADMIN' || r === 'SUPER_ADMIN';
+  })();
 
   const handleNavTabChange = (tab: Tab) => {
     const protectedTabs = ['My Booking', 'Notifications', 'Favorites'];
