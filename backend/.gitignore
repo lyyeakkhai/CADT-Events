@@ -32,3 +32,8 @@ tmp/
 *.tmp
 
 /src/generated/prisma
+
+# Keep in sync with root — ignore local junk
+*.out
+.agents/
+skills-lock.json
