@@ -167,21 +167,22 @@ function MainApp() {
   const isAdmin = isAdminAccount({
     role: user?.publicMetadata?.role as string | undefined,
     email: user?.primaryEmailAddress?.emailAddress,
+    emails: user?.emailAddresses?.map((e) => e.emailAddress).filter(Boolean) as string[],
   });
   const adminPortalUrl = getAdminPortalUrl();
 
   useEffect(() => {
     if (!user || !isAdmin || !adminPortalUrl) return;
 
-    // Auto-open admin portal once per tab session (admins sign in again on admin domain).
-    // If blocked, user can still click the banner button.
+    // Auto-open admin portal once per tab. Admins must sign in again on admin domain.
+    // Button "Open Admin Portal" always works even after this flag is set.
     const key = 'cadt_admin_redirect_once';
     try {
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, '1');
-      window.location.replace(adminPortalUrl);
+      window.location.assign(adminPortalUrl);
     } catch {
-      window.location.replace(adminPortalUrl);
+      window.location.href = adminPortalUrl;
     }
   }, [user, isAdmin, adminPortalUrl]);
 

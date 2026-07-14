@@ -1,25 +1,46 @@
 /**
- * Admin detection for the student app — aligned with backend / admin portal.
- * Role ADMIN|SUPER_ADMIN in Clerk publicMetadata, or email in VITE_ADMIN_EMAILS.
+ * Admin detection for the student app — keep in sync with frontend-admin adminAccess.ts
  */
-export function getAdminEmails(): string[] {
-  const fromEnv = (import.meta.env.VITE_ADMIN_EMAILS as string | undefined)
-    ?.split(',')
+
+const DEFAULT_ADMIN_EMAILS = [
+  'yeakkhai.ly@student.cadt.edu.kh',
+  'admin123@stuff.cadt.edu.kh',
+];
+
+function parseEmailList(raw?: string | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  if (fromEnv && fromEnv.length > 0) return fromEnv;
-  // Same demo defaults as frontend-admin (optional fallback)
-  return ['yeakkhai.ly@student.cadt.edu.kh', 'admin123@stuff.cadt.edu.kh'];
+}
+
+export function getAdminEmails(): string[] {
+  const fromEnv = parseEmailList(import.meta.env.VITE_ADMIN_EMAILS as string | undefined);
+  const merged = new Set<string>([...DEFAULT_ADMIN_EMAILS, ...fromEnv]);
+  return Array.from(merged);
+}
+
+export function isAdminRoleValue(role: unknown): boolean {
+  if (role == null) return false;
+  const r = String(role).trim().toUpperCase();
+  return r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'ADMINISTRATOR';
 }
 
 export function isAdminAccount(opts: {
   role?: string | null;
   email?: string | null;
+  emails?: string[] | null;
 }): boolean {
-  const r = String(opts.role || '').toUpperCase();
-  if (r === 'ADMIN' || r === 'SUPER_ADMIN') return true;
-  const email = (opts.email || '').trim().toLowerCase();
-  return !!email && getAdminEmails().includes(email);
+  if (isAdminRoleValue(opts.role)) return true;
+  const allow = getAdminEmails();
+  const candidates = [
+    opts.email,
+    ...(opts.emails || []),
+  ]
+    .filter(Boolean)
+    .map((e) => String(e).trim().toLowerCase());
+  return candidates.some((e) => allow.includes(e));
 }
 
 export function getAdminPortalUrl(): string | null {

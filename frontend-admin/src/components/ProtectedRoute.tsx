@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { USER_FRONTEND_URL } from '../lib/urls';
 import { isAdminUser } from '../lib/adminAccess';
@@ -9,24 +9,37 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Same Clerk login UI as student (LoginView).
- * After sign-in: admins enter the portal; students are sent to the student site.
- * Sign-in stays on the admin domain (no redirect loop across Vercel apps).
+ * 1) Not signed in → same CADT login UI as student (on this domain).
+ * 2) Signed in + admin → dashboard.
+ * 3) Signed in + student → redirect to student site (not a loop: admin stays if isAdmin).
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isLoaded, isSignedIn, user } = useUser();
 
-  const role = user?.publicMetadata?.role as string | undefined;
-  const email = user?.primaryEmailAddress?.emailAddress;
-  const isAdmin = isAdminUser({ role, email });
+  const isAdmin = useMemo(() => {
+    if (!user) return false;
+    return isAdminUser({
+      role: user.publicMetadata?.role as string | undefined,
+      email: user.primaryEmailAddress?.emailAddress,
+      user,
+    });
+  }, [user]);
 
-  // Student (or any non-admin) who opens admin URL → redirect to student frontend
+  const studentHome = (USER_FRONTEND_URL || 'https://cadt-events.vercel.app').replace(
+    /\/$/,
+    '',
+  );
+
+  // Non-admin signed-in users → student site
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     if (isAdmin) return;
-    const target = USER_FRONTEND_URL || 'https://cadt-events.vercel.app';
-    window.location.replace(target);
-  }, [isLoaded, isSignedIn, isAdmin]);
+    // Small delay so we don't flash before Clerk metadata settles
+    const t = window.setTimeout(() => {
+      window.location.replace(studentHome);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [isLoaded, isSignedIn, isAdmin, studentHome]);
 
   if (!isLoaded) {
     return (
@@ -44,14 +57,27 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAdmin) {
+    const role = user?.publicMetadata?.role;
+    const email = user?.primaryEmailAddress?.emailAddress;
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="text-center max-w-sm space-y-3">
+        <div className="text-center max-w-md space-y-4">
           <div className="w-8 h-8 mx-auto rounded-full border-2 border-slate-900 border-t-transparent animate-spin" />
-          <p className="text-sm font-medium text-slate-600">
-            This account is for students. Redirecting to the student portal…
+          <p className="text-sm font-medium text-slate-700">
+            This account is not an admin. Redirecting to the student portal…
           </p>
-          <a href={USER_FRONTEND_URL} className="text-sm font-semibold text-[#0b2c6a] underline">
+          <div className="text-left text-xs font-mono bg-white border border-slate-200 rounded-lg p-3 text-slate-600">
+            <p>Email: {email || '(none)'}</p>
+            <p>Clerk role: {role != null ? String(role) : '(missing)'}</p>
+            <p className="mt-2 text-slate-500">
+              Fix: Clerk → User → Public metadata →{' '}
+              <code className="bg-slate-100 px-1">role: &quot;ADMIN&quot;</code>
+              <br />
+              or add this email to Render <code className="bg-slate-100 px-1">ADMIN_EMAILS</code> and
+              Vercel <code className="bg-slate-100 px-1">VITE_ADMIN_EMAILS</code>, then re-login.
+            </p>
+          </div>
+          <a href={studentHome} className="text-sm font-semibold text-[#0b2c6a] underline">
             Continue to student site
           </a>
         </div>
