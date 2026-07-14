@@ -3,27 +3,66 @@ node_modules/
 
 # Build outputs
 dist/
+dist-ssr/
+build/
 .next/
+coverage/
 
-# Environment
+# Environment / secrets (never commit)
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+!.env.example
 
-# Prisma
-prisma/*.db
+# Prisma local DBs
+**/prisma/*.db
+**/prisma/*.db-journal
 
-# IDE
-.vscode/
-.idea/
+# Logs & temp
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.out
+*.tmp
+tmp/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Debug
-npm-debug.log*
-.gstack/
+# IDE
+.vscode/
+.idea/
+*.sw?
+*.suo
 
-# AI Worktrees
+# Local AI / agent tooling (not runtime)
+.gstack/
 .ai-worktrees/
+.antigravitycli/
+.conductor/
+**/.agents/
+**/skills-lock.json
+
+# Backups / dumps (may contain PII)
+*.dump
+*.sql.bak
+cadt_events_full_*.sql
+cadt_events_full_*.dump
+
+# Test / coverage leftovers
+coverage/
+.nyc_output/
+
+# E2E artifacts (keep specs; ignore run output)
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/screenshots/
+e2e/screenshots-*/
+e2e/.env.test

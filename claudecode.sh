@@ -1,1 +1,0 @@
-../deepclaude-cli/deepclaude.sh "$@"

@@ -10,28 +10,33 @@ Three separate npm packages (not a workspace monorepo):
 
 Always `cd` into the package before `npm install` / `npm run *`.
 
-## Deploy Configuration (configured by /setup-deploy)
+## Deploy Configuration
 
-- Platform: **Render** (free tier Blueprint via `render.yaml`)
-- Production URL (API): `https://cadt-events-api.onrender.com` (confirm after first Blueprint deploy)
-- Production URL (web): `https://cadt-events-web.onrender.com`
-- Production URL (admin): `https://cadt-events-admin.onrender.com`
-- Deploy workflow: auto-deploy on push to the branch connected in Render (usually `main`)
-- Deploy status command: HTTP health check
-- Merge method: squash
-- Project type: web app + API (3 services)
+| Piece | Host |
+|-------|------|
+| Database | **Supabase** Postgres |
+| Backend API | **Render** (`render.yaml` — API only) |
+| Student web | **Vercel** (root dir `frontend/`) |
+| Admin web | **Vercel** (root dir `frontend-admin/`) |
+| CI | **GitHub Actions** (`.github/workflows/ci.yml`) |
+
+- Production URL (API): `https://cadt-events-api.onrender.com`
+- Production URL (web): Vercel student project URL (set after first Vercel deploy)
+- Production URL (admin): Vercel admin project URL
+- Deploy workflow: push to `main` → CI build; Render + Vercel auto-deploy connected projects
 - Post-deploy health check: `https://cadt-events-api.onrender.com/api/health`
+- CORS: set Render `FRONTEND_URL` / `ADMIN_URL` to the two Vercel origins
 
 ### Custom deploy hooks
 
-- Pre-merge: GitHub Actions CI (`.github/workflows/ci.yml`) — lint (non-blocking) + build all three packages
-- Deploy trigger: automatic on push to main (Render Blueprint)
-- Deploy status: poll `GET /api/health` until HTTP 200
+- Pre-merge / push: GitHub Actions CI — lint (non-blocking) + **build** all three packages
+- CD API: Render auto-deploy on push to connected branch
+- CD web/admin: Vercel auto-deploy per project
 - Health check: `curl -sf https://cadt-events-api.onrender.com/api/health`
 
 ### Deploy docs
 
-Full student/demo free-host guide: [`docs/operations/deploy.md`](./docs/operations/deploy.md)
+Full guide: [`docs/operations/deploy.md`](./docs/operations/deploy.md)
 
 ### Backend production start
 

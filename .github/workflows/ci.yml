@@ -1,3 +1,7 @@
+# Continuous Integration — build gate for CADT Events
+# CD (deploy) is handled by hosts, not this workflow:
+#   - Backend  → Render auto-deploy (render.yaml)
+#   - Frontends → Vercel auto-deploy (rootDir frontend / frontend-admin)
 name: CI
 
 on:
