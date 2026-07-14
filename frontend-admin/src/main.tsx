@@ -14,7 +14,11 @@ if (!PUBLISHABLE_KEY) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl={USER_FRONTEND_URL}>
+    <ClerkProvider
+      publishableKey={PUBLISHABLE_KEY}
+      // Stay on admin origin after sign-out so we don't bounce through student app
+      afterSignOutUrl="/"
+    >
       <BrowserRouter>
         <App />
       </BrowserRouter>

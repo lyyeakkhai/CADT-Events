@@ -69,7 +69,7 @@ export default function Navbar({ currentView, setCurrentView, searchQuery, setSe
           <button className="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-all">
             <Settings size={20} />
           </button>
-          <UserButton afterSignOutUrl={USER_FRONTEND_URL} />
+          <UserButton afterSignOutUrl="/" />
         </div>
       </div>
     </header>

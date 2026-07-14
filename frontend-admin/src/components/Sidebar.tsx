@@ -173,7 +173,7 @@ export default function Sidebar({
         <div className="sidebar-divider" />
 
         <div className={`sidebar-user ${!showLabels ? 'justify-center' : ''}`}>
-          <UserButton afterSignOutUrl={USER_FRONTEND_URL} />
+          <UserButton afterSignOutUrl="/" />
           {showLabels && <span className="sidebar-user-label">Account</span>}
         </div>
 

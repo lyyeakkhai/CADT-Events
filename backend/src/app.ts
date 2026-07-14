@@ -14,17 +14,36 @@ export function createApp() {
   const app = express();
 
   // Security & parsing
-  app.use(helmet());
+  // crossOriginResourcePolicy: allow browser apps on Vercel to call this API
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+  );
+
+  // CORS: localhost (dev) + FRONTEND_URL / ADMIN_URL (production Vercel origins)
+  // Origins must match exactly (scheme + host, no trailing slash).
+  const corsOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5174",
+    process.env.FRONTEND_URL,
+    process.env.ADMIN_URL,
+    process.env.PUBLIC_WEB_URL,
+  ]
+    .filter(Boolean)
+    .map((o) => String(o).replace(/\/$/, ""));
+
   app.use(
     cors({
-      origin: [
-        "http://localhost:5173",  // user frontend
-        "http://localhost:3000",  // admin frontend
-        "http://localhost:3001",  // admin frontend (fallback port)
-        "http://localhost:5174",
-        process.env.FRONTEND_URL,
-        process.env.ADMIN_URL,
-      ].filter(Boolean) as string[],
+      origin: (origin, callback) => {
+        // Non-browser clients (curl, server-to-server) have no Origin
+        if (!origin) return callback(null, true);
+        const normalized = origin.replace(/\/$/, "");
+        if (corsOrigins.includes(normalized)) return callback(null, true);
+        callback(null, false);
+      },
       credentials: true,
     })
   );
