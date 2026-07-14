@@ -98,13 +98,23 @@ export function isAdminAccount(opts: {
 export const isAdminUser = isAdminAccount;
 
 /**
- * Production admin origin only. Localhost is ignored so student never
- * auto-redirects to a local admin during demos.
+ * Admin portal origin for hard-redirect after admin login on the student site.
+ * - Prefer VITE_ADMIN_URL (set on student Vercel).
+ * - Production build falls back to known admin host if env was forgotten.
+ * - Localhost VITE_ADMIN_URL is allowed only in DEV (so local dual-app works).
  */
 export function getAdminPortalUrl(): string | null {
   const raw = (import.meta.env.VITE_ADMIN_URL as string | undefined)?.trim();
-  if (!raw) return null;
-  const url = raw.replace(/\/$/, '');
-  if (/localhost|127\.0\.0\.1/i.test(url)) return null;
-  return url;
+  if (raw) {
+    const url = raw.replace(/\/$/, '');
+    if (/localhost|127\.0\.0\.1/i.test(url)) {
+      return import.meta.env.DEV ? url : null;
+    }
+    return url;
+  }
+  // Production safety net when VITE_ADMIN_URL was not baked into the build
+  if (!import.meta.env.DEV) {
+    return 'https://cadt-events-ytaz.vercel.app';
+  }
+  return null;
 }
