@@ -25,6 +25,7 @@ import TelegramConnectPrompt from './components/TelegramConnectPrompt';
 import type { AcademicEvent } from './features/events/data/eventData';
 import { getEvent, type ApiEvent } from './services/api';
 import { toAcademicEvent } from './lib/eventMapper';
+import { getAdminPortalUrl, isAdminAccount } from './lib/adminRole';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,51 +164,44 @@ function MainApp() {
   // Telegram prompt state — show once after register/auth unless dismissed
   const [showTelegramPrompt, setShowTelegramPrompt] = useState(false);
 
+  const isAdmin = isAdminAccount({
+    role: user?.publicMetadata?.role as string | undefined,
+    email: user?.primaryEmailAddress?.emailAddress,
+  });
+  const adminPortalUrl = getAdminPortalUrl();
+
   useEffect(() => {
-    if (user) {
-      const role = String(user.publicMetadata?.role || '').toUpperCase();
-      const isAdminRole = role === 'ADMIN' || role === 'SUPER_ADMIN';
-      const adminUrl = (import.meta.env.VITE_ADMIN_URL as string | undefined)?.replace(/\/$/, '');
+    if (!user || !isAdmin || !adminPortalUrl) return;
 
-      // Admins who land on the student site: send them to admin portal (production URL only).
-      // They sign in again on the admin domain (Clerk cookies are not shared across Vercel apps).
-      if (isAdminRole && adminUrl && !/localhost|127\.0\.0\.1/i.test(adminUrl)) {
-        const key = 'cadt_admin_redirect_once';
-        try {
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, '1');
-            window.location.replace(adminUrl);
-            return;
-          }
-        } catch {
-          window.location.replace(adminUrl);
-          return;
-        }
-      }
-
-      setActiveTab('Discover');
-
-      // Show Telegram prompt shortly after first authenticated load (unless previously dismissed this browser)
-      try {
-        const dismissed = localStorage.getItem('telegramPromptDismissed');
-        if (!dismissed && !isAdminRole) {
-          const t = setTimeout(() => setShowTelegramPrompt(true), 1400);
-          return () => clearTimeout(t);
-        }
-      } catch {}
+    // Auto-open admin portal once per tab session (admins sign in again on admin domain).
+    // If blocked, user can still click the banner button.
+    const key = 'cadt_admin_redirect_once';
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+      window.location.replace(adminPortalUrl);
+    } catch {
+      window.location.replace(adminPortalUrl);
     }
-  }, [user]);
+  }, [user, isAdmin, adminPortalUrl]);
+
+  useEffect(() => {
+    if (!user || isAdmin) return;
+    setActiveTab('Discover');
+    try {
+      const dismissed = localStorage.getItem('telegramPromptDismissed');
+      if (!dismissed) {
+        const t = setTimeout(() => setShowTelegramPrompt(true), 1400);
+        return () => clearTimeout(t);
+      }
+    } catch {}
+  }, [user, isAdmin]);
 
   useEffect(() => {
     const handleOpenPrompt = () => setShowTelegramPrompt(true);
     document.addEventListener('open-telegram-prompt', handleOpenPrompt);
     return () => document.removeEventListener('open-telegram-prompt', handleOpenPrompt);
   }, []);
-
-  const isAdmin = (() => {
-    const r = String(user?.publicMetadata?.role || '').toUpperCase();
-    return r === 'ADMIN' || r === 'SUPER_ADMIN';
-  })();
 
   const handleNavTabChange = (tab: Tab) => {
     const protectedTabs = ['My Booking', 'Notifications', 'Favorites'];
@@ -263,16 +257,31 @@ function MainApp() {
       />
 
       {/* Subtle institutional context (de-emphasized per design review) */}
-      <div className="w-full bg-[#0b2c6a]/5 text-[#0b2c6a] px-4 sm:px-8 py-1 text-[10px] font-medium flex justify-between items-center border-b border-[#0b2c6a]/10 select-none">
-        <div className="flex items-center gap-2">
-          <span className="w-1 h-1 rounded-full bg-[#0b2c6a] opacity-60" />
-          <span>
-            CADT Events — {isAdmin ? 'Admin' : 'Student Portal'}
+      <div className="w-full bg-[#0b2c6a]/5 text-[#0b2c6a] px-4 sm:px-8 py-1 text-[10px] font-medium flex justify-between items-center border-b border-[#0b2c6a]/10 select-none gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-1 h-1 rounded-full bg-[#0b2c6a] opacity-60 shrink-0" />
+          <span className="truncate">
+            CADT Events — {isAdmin ? 'Admin (student site)' : 'Student Portal'}
           </span>
         </div>
-        <span className="text-[#0b2c6a]/60 text-[10px] truncate max-w-[220px]">
-          {user?.primaryEmailAddress?.emailAddress}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {isAdmin && adminPortalUrl && (
+            <a
+              href={adminPortalUrl}
+              className="text-[10px] font-bold uppercase tracking-wide bg-[#0b2c6a] text-white px-2.5 py-1 rounded-md hover:bg-[#082050]"
+            >
+              Open Admin Portal →
+            </a>
+          )}
+          {isAdmin && !adminPortalUrl && (
+            <span className="text-[10px] text-amber-700 font-semibold">
+              Set VITE_ADMIN_URL on Vercel
+            </span>
+          )}
+          <span className="text-[#0b2c6a]/60 text-[10px] truncate max-w-[180px] hidden sm:inline">
+            {user?.primaryEmailAddress?.emailAddress}
+          </span>
+        </div>
       </div>
 
       {/* Page content */}
