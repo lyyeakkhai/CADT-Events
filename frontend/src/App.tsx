@@ -168,14 +168,16 @@ function MainApp() {
     role: user?.publicMetadata?.role as string | undefined,
     email: user?.primaryEmailAddress?.emailAddress,
     emails: user?.emailAddresses?.map((e) => e.emailAddress).filter(Boolean) as string[],
+    user: user ?? null,
   });
   const adminPortalUrl = getAdminPortalUrl();
 
   useEffect(() => {
     if (!user || !isAdmin || !adminPortalUrl) return;
 
-    // Auto-open admin portal once per tab. Admins must sign in again on admin domain.
-    // Button "Open Admin Portal" always works even after this flag is set.
+    // One-shot auto-open of admin portal per browser tab.
+    // Clerk sessions are NOT shared across domains — user must sign in again on admin.
+    // The always-visible "Open Admin Portal" button still works after this flag is set.
     const key = 'cadt_admin_redirect_once';
     try {
       if (sessionStorage.getItem(key)) return;
@@ -257,26 +259,27 @@ function MainApp() {
         onProfileClick={() => {}}
       />
 
-      {/* Subtle institutional context (de-emphasized per design review) */}
-      <div className="w-full bg-[#0b2c6a]/5 text-[#0b2c6a] px-4 sm:px-8 py-1 text-[10px] font-medium flex justify-between items-center border-b border-[#0b2c6a]/10 select-none gap-2">
+      {/* Institutional context + always-visible admin portal entry */}
+      <div className="w-full bg-[#0b2c6a]/5 text-[#0b2c6a] px-4 sm:px-8 py-1.5 text-[10px] font-medium flex justify-between items-center border-b border-[#0b2c6a]/10 select-none gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="w-1 h-1 rounded-full bg-[#0b2c6a] opacity-60 shrink-0" />
           <span className="truncate">
-            CADT Events — {isAdmin ? 'Admin (student site)' : 'Student Portal'}
+            CADT Events — {isAdmin ? 'Admin account on student site' : 'Student Portal'}
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isAdmin && adminPortalUrl && (
             <a
               href={adminPortalUrl}
-              className="text-[10px] font-bold uppercase tracking-wide bg-[#0b2c6a] text-white px-2.5 py-1 rounded-md hover:bg-[#082050]"
+              className="text-[10px] font-bold uppercase tracking-wide bg-[#0b2c6a] text-white px-2.5 py-1 rounded-md hover:bg-[#082050] whitespace-nowrap"
+              title="Opens the admin app on a different domain — you will sign in again there"
             >
               Open Admin Portal →
             </a>
           )}
           {isAdmin && !adminPortalUrl && (
-            <span className="text-[10px] text-amber-700 font-semibold">
-              Set VITE_ADMIN_URL on Vercel
+            <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+              Set VITE_ADMIN_URL on Vercel (student project), then redeploy
             </span>
           )}
           <span className="text-[#0b2c6a]/60 text-[10px] truncate max-w-[180px] hidden sm:inline">
@@ -284,6 +287,19 @@ function MainApp() {
           </span>
         </div>
       </div>
+      {isAdmin && adminPortalUrl && (
+        <div className="w-full bg-amber-50 border-b border-amber-200 px-4 sm:px-8 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <p className="text-xs text-amber-900 font-medium">
+            You have admin access. Manage events on the admin portal (separate login on that domain).
+          </p>
+          <a
+            href={adminPortalUrl}
+            className="inline-flex items-center justify-center text-xs font-bold uppercase tracking-wide bg-[#0b2c6a] text-white px-3 py-1.5 rounded-md hover:bg-[#082050] shrink-0"
+          >
+            Open Admin Portal →
+          </a>
+        </div>
+      )}
 
       {/* Page content */}
       <div className="flex-grow w-full flex flex-col">

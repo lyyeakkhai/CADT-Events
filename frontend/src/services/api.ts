@@ -1,9 +1,16 @@
 // Central API client for the user frontend.
-// Reads VITE_API_URL from env (defaults to localhost:4000 matching backend).
+// Reads VITE_API_URL from env. Production builds must set it on Vercel.
 // All requests to auth-protected routes pass the Clerk JWT automatically.
 import { useAuth } from '@clerk/clerk-react';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
+function resolveApiBase(): string {
+  const raw = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+  if (raw) return raw.replace(/\/$/, '');
+  if (import.meta.env.DEV) return 'http://localhost:4000/api';
+  return 'https://cadt-events.onrender.com/api';
+}
+
+const API_BASE = resolveApiBase();
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface ApiEvent {

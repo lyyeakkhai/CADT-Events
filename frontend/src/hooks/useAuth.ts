@@ -1,5 +1,6 @@
 import { useSignIn, useSignUp, useClerk, useUser } from '@clerk/clerk-react';
 import { useState } from 'react';
+import { isAdminAccount } from '../lib/adminRole';
 
 /**
  * Central auth hook — wraps Clerk primitives into the app's own API.
@@ -123,11 +124,15 @@ export function useAuth() {
     await signOut();
   };
 
-  // ── Derive role from Clerk metadata ─────────────────────────────────────
-  // publicMetadata.role should be ADMIN | SUPER_ADMIN (or email allowlist on apps).
+  // ── Derive role from Clerk metadata + email allowlist ───────────────────
+  // publicMetadata.role: ADMIN | SUPER_ADMIN | ADMINISTRATOR, or VITE_ADMIN_EMAILS.
   const role = String((user?.publicMetadata?.role as string) ?? 'student');
-  const isAdmin =
-    role.toUpperCase() === 'ADMIN' || role.toUpperCase() === 'SUPER_ADMIN';
+  const isAdmin = isAdminAccount({
+    role,
+    email: user?.primaryEmailAddress?.emailAddress,
+    emails: user?.emailAddresses?.map((e) => e.emailAddress).filter(Boolean) as string[],
+    user: user ?? null,
+  });
 
   return {
     user,

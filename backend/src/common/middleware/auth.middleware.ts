@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { clerkClient, getAuth, verifyToken } from "@clerk/express";
 import { ForbiddenError } from "@/common/errors/app-error";
-import { isAdminEmail } from "@/config/admins";
+import { isAdminEmail, isAnyAdminEmail } from "@/config/admins";
 
 /**
  * Custom authentication middleware.
@@ -30,25 +30,25 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     (req as any).customAuth = { userId: verified.sub, sessionClaims: verified };
     next();
   } catch (error: any) {
-    console.error('[requireAuth] Manual verification failed:', error.message);
-    return res.status(401).json({ 
-      success: false, 
+    console.error("[requireAuth] Manual verification failed:", error.message);
+    return res.status(401).json({
+      success: false,
       message: "Unauthenticated: Clerk token invalid.",
-      error: error.message
+      error: error.message,
     });
   }
 };
 
 function isAdminRoleValue(role: unknown): boolean {
-  if (typeof role !== "string") return false;
-  const r = role.toUpperCase();
-  return r === "ADMIN" || r === "SUPER_ADMIN";
+  if (role == null) return false;
+  const r = String(role).trim().toUpperCase().replace(/[\s-]+/g, "_");
+  return r === "ADMIN" || r === "SUPER_ADMIN" || r === "SUPERADMIN" || r === "ADMINISTRATOR";
 }
 
 /**
  * Middleware to restrict access to certain roles.
  * Must be used AFTER requireAuth.
- * ADMIN: publicMetadata.role OR email in ADMIN_EMAILS (demo-safe if webhook lagged).
+ * ADMIN: publicMetadata.role OR any linked email in ADMIN_EMAILS (demo-safe if webhook lagged).
  */
 export function requireRole(role: "ADMIN" | "STUDENT") {
   return async (req: Request, _res: Response, next: NextFunction) => {
@@ -60,18 +60,20 @@ export function requireRole(role: "ADMIN" | "STUDENT") {
 
       const user = await clerkClient.users.getUser(auth.userId);
       const userRole = user.publicMetadata?.role;
+      const allEmails = user.emailAddresses.map((e) => e.emailAddress).filter(Boolean);
       const primaryEmail =
         user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ||
-        user.emailAddresses[0]?.emailAddress;
+        allEmails[0];
 
       if (role === "ADMIN") {
-        const allowed = isAdminRoleValue(userRole) || isAdminEmail(primaryEmail);
+        const onAllowlist = isAnyAdminEmail(allEmails) || isAdminEmail(primaryEmail);
+        const allowed = isAdminRoleValue(userRole) || onAllowlist;
         if (!allowed) {
           throw new ForbiddenError("Insufficient permissions — admin role required");
         }
 
         // Heal Clerk metadata for demo teachers on allowlist but missing role
-        if (!isAdminRoleValue(userRole) && isAdminEmail(primaryEmail)) {
+        if (!isAdminRoleValue(userRole) && onAllowlist) {
           try {
             await clerkClient.users.updateUserMetadata(auth.userId, {
               publicMetadata: { ...user.publicMetadata, role: "ADMIN" },
