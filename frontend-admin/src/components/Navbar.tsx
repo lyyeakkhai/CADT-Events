@@ -1,7 +1,6 @@
 import { School, Search, Bell, Settings } from 'lucide-react';
 import { UserButton } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
-import { USER_FRONTEND_URL } from '../lib/urls';
 
 interface NavbarProps {
   currentView: ViewType;

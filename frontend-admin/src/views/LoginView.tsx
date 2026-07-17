@@ -106,8 +106,8 @@ export default function LoginView() {
             By signing in, you agree to the CADT Events Terms of Service and Privacy Policy.
           </p>
           <p className="mt-3 text-[11px] text-slate-400 text-center max-w-sm leading-relaxed">
-            Admin uses a separate domain from the student app. Even if you already signed in on the
-            student site, sign in again here.
+            Production: admin lives at <code className="bg-slate-100 px-1 rounded">/admin</code> on
+            the same site — one login. Local dual-port may require signing in again.
           </p>
 
           <a

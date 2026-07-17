@@ -33,8 +33,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     });
   }, [user]);
 
-  // Never fall back to localhost in production (urls.ts already guards this).
-  const studentHome = USER_FRONTEND_URL.replace(/\/$/, '') || 'https://cadt-events.vercel.app';
+  // Same-origin `/` in production unified deploy; localhost in dual-port dev.
+  const studentHome = USER_FRONTEND_URL || '/';
 
   // Settle Clerk metadata before redirecting "non-admins"
   useEffect(() => {
@@ -141,9 +141,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
               Public metadata → set <code className="mx-1 bg-slate-100 px-1 rounded">role</code> to
               <code className="mx-1 bg-slate-100 px-1 rounded">&quot;ADMIN&quot;</code>
               (uppercase), or add your email to{' '}
-              <code className="mx-1 bg-slate-100 px-1 rounded">VITE_ADMIN_EMAILS</code> on the admin
+              <code className="mx-1 bg-slate-100 px-1 rounded">VITE_ADMIN_EMAILS</code> on the web
               Vercel project and <code className="mx-1 bg-slate-100 px-1 rounded">ADMIN_EMAILS</code>{' '}
-              on Render, then redeploy and sign in again on this admin URL.
+              on Render, then redeploy and open <code className="mx-1 bg-slate-100 px-1 rounded">/admin</code>.
             </p>
           </div>
           <a

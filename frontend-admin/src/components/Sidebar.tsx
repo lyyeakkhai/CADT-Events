@@ -15,7 +15,6 @@ import { UserButton } from '@clerk/clerk-react';
 import type { ViewType } from '../App';
 // Same CADT anniversary logo as student frontend navbar
 import Logo from '../assets/CADT10-LOGO-anniversary-03.png';
-import { USER_FRONTEND_URL } from '../lib/urls';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../lib/apiClient';
 

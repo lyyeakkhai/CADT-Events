@@ -16,17 +16,16 @@ Always `cd` into the package before `npm install` / `npm run *`.
 |-------|------|
 | Database | **Supabase** Postgres |
 | Backend API | **Render** (`render.yaml` — API only) |
-| Student web | **Vercel** (root dir `frontend/`) |
-| Admin web | **Vercel** (root dir `frontend-admin/`) |
+| Student + Admin web | **One Vercel project** (repo root → `scripts/build-web.sh` → `deploy/`) |
 | CI | **GitHub Actions** (`.github/workflows/ci.yml`) |
 
 - Production URL (API): `https://cadt-events.onrender.com`
 - Production URL (web): `https://cadt-events.vercel.app`
-- Production URL (admin): `https://cadt-events-ytaz.vercel.app`
-- Deploy workflow: push to `main` → CI build; Render + Vercel auto-deploy connected projects
+- Production URL (admin): `https://cadt-events.vercel.app/admin` (same origin, shared Clerk cookie)
+- Deploy workflow: push to `main` → CI build; Render + Vercel auto-deploy
 - Post-deploy health check: `https://cadt-events.onrender.com/api/health`
-- CORS: set Render `FRONTEND_URL` / `ADMIN_URL` to the two Vercel origins
-- Dual-domain auth: Clerk sessions are **not** shared across student vs admin hosts — admins re-sign-in on admin
+- CORS: set Render `FRONTEND_URL` and `ADMIN_URL` both to the same web origin (admin path is same host)
+- Auth: one Clerk session for student + admin; after admin login on `/` → hard navigate to `/admin`
 
 ### Custom deploy hooks
 
