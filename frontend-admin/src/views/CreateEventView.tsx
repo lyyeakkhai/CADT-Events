@@ -34,11 +34,72 @@ const INITIAL: EventForm = {
   status: 'DRAFT',
 };
 
+/** Persist create-event form across refresh (text fields + URL; not local File blobs). */
+const DRAFT_STORAGE_KEY = 'cadt-admin-create-event-draft';
+
+function loadDraft(): { form: EventForm; restored: boolean } {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return { form: INITIAL, restored: false };
+    const parsed = JSON.parse(raw) as Partial<EventForm>;
+    if (!parsed || typeof parsed !== 'object') return { form: INITIAL, restored: false };
+
+    const form: EventForm = {
+      ...INITIAL,
+      title: typeof parsed.title === 'string' ? parsed.title : INITIAL.title,
+      description: typeof parsed.description === 'string' ? parsed.description : INITIAL.description,
+      eventType: typeof parsed.eventType === 'string' ? parsed.eventType : INITIAL.eventType,
+      startTimestamp: typeof parsed.startTimestamp === 'string' ? parsed.startTimestamp : INITIAL.startTimestamp,
+      endTimestamp: typeof parsed.endTimestamp === 'string' ? parsed.endTimestamp : INITIAL.endTimestamp,
+      location: typeof parsed.location === 'string' ? parsed.location : INITIAL.location,
+      coverImageUrl: typeof parsed.coverImageUrl === 'string' ? parsed.coverImageUrl : INITIAL.coverImageUrl,
+      creditValue: typeof parsed.creditValue === 'number' ? parsed.creditValue : INITIAL.creditValue,
+      capacity: typeof parsed.capacity === 'number' ? parsed.capacity : parsed.capacity === null ? null : INITIAL.capacity,
+      isFeatured: typeof parsed.isFeatured === 'boolean' ? parsed.isFeatured : INITIAL.isFeatured,
+      status: parsed.status === 'PUBLISHED' || parsed.status === 'DRAFT' ? parsed.status : INITIAL.status,
+    };
+
+    const hasContent =
+      form.title.trim() ||
+      form.description.trim() ||
+      form.location.trim() ||
+      form.startTimestamp ||
+      form.endTimestamp ||
+      form.coverImageUrl.trim() ||
+      form.creditValue > 0 ||
+      form.capacity != null ||
+      form.isFeatured;
+
+    return { form, restored: !!hasContent };
+  } catch {
+    return { form: INITIAL, restored: false };
+  }
+}
+
+function saveDraft(form: EventForm) {
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(form));
+  } catch {
+    // Quota / private mode — ignore
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export default function CreateEventView() {
   const _nav = useNavigate();
   const onNavigate = (v: string) => _nav(v === 'dashboard' ? '/' : '/' + v);
   const { getToken } = useAuth();
-  const [form, setForm] = useState<EventForm>(INITIAL);
+  // Restore draft synchronously so the first save effect does not wipe localStorage
+  const [bootDraft] = useState(() => loadDraft());
+  const [form, setForm] = useState<EventForm>(() => bootDraft.form);
+  const [draftRestored, setDraftRestored] = useState(() => bootDraft.restored);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -47,8 +108,14 @@ export default function CreateEventView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Hold the selected File locally. Only upload to Cloudinary on actual event creation (confirm first).
+  // Note: File objects cannot be restored from localStorage after refresh — use Cover Image URL for that.
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string>('');
+
+  // Autosave form text fields to localStorage whenever they change
+  useEffect(() => {
+    saveDraft(form);
+  }, [form]);
 
   // Manage local preview URL (from File) + cleanup to avoid memory leaks
   useEffect(() => {
@@ -72,6 +139,15 @@ export default function CreateEventView() {
 
   const set = (key: keyof EventForm, val: string | number | boolean | null) =>
     setForm(prev => ({ ...prev, [key]: val as any }));
+
+  function discardDraft() {
+    clearDraft();
+    setForm(INITIAL);
+    setCoverImageFile(null);
+    setDraftRestored(false);
+    setError(null);
+    setSuccess(null);
+  }
 
   // Real image upload to backend (/api/upload -> Cloudinary)
   // Uses the main apiClient + explicit token from hook for reliability
@@ -218,9 +294,11 @@ export default function CreateEventView() {
       console.log('[CreateEvent] Success response:', res.data);
       const createdId = res.data?.data?.id as string | undefined;
 
-      // Clear cached file after successful creation
+      // Clear cached file + localStorage draft after successful creation
       setCoverImageFile(null);
       setLocalPreviewUrl('');
+      clearDraft();
+      setDraftRestored(false);
 
       const msg =
         status === 'PUBLISHED'
@@ -260,9 +338,34 @@ export default function CreateEventView() {
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Create New Event</h1>
         <p className="text-slate-500 mt-2 text-base">
           For demos: fill the form → <strong>Publish Event</strong> so students see it on the public site.
-          Use <strong>Save as Draft</strong> while preparing.
+          Use <strong>Save as Draft</strong> while preparing. Your typing is auto-saved in this browser.
         </p>
       </header>
+
+      {/* Draft restored banner */}
+      {draftRestored && !success && (
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm font-medium shadow-sm">
+          <span>
+            Restored your unfinished form from this browser (refresh-safe). Local image files are not restored — re-upload or paste a URL if needed.
+          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setDraftRestored(false)}
+              className="px-3 py-1.5 rounded-lg bg-white border border-amber-200 text-amber-800 text-xs font-bold hover:bg-amber-100/60"
+            >
+              Keep editing
+            </button>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="px-3 py-1.5 rounded-lg bg-white border border-amber-200 text-red-600 text-xs font-bold hover:bg-red-50"
+            >
+              Discard draft
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Success toast */}
       {success && (
