@@ -172,8 +172,9 @@ function MainApp() {
   });
   const adminPortalUrl = getAdminPortalUrl();
 
-  // Admins never stay on the student UI: hard-redirect immediately (no banner, no prompt).
-  // Clerk sessions are per-domain — they will sign in again on the admin origin.
+  // Admins never stay on the student UI: hard-navigate to admin SPA.
+  // Production: same origin `/admin` → Clerk cookie is shared (one login).
+  // Local: dual-port → separate cookie (sign-in again on :3000 is expected).
   useEffect(() => {
     if (!user || !isAdmin || !adminPortalUrl) return;
     window.location.replace(adminPortalUrl);
@@ -226,31 +227,13 @@ function MainApp() {
   };
 
   // Do not paint student Discover/home for admins — redirect only.
-  if (isAdmin && adminPortalUrl) {
+  if (isAdmin) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-slate-900 border-t-transparent animate-spin" />
           <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
             Redirecting to admin portal…
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAdmin && !adminPortalUrl) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="max-w-md text-center space-y-3">
-          <h1 className="text-lg font-bold text-slate-900">Admin portal URL not configured</h1>
-          <p className="text-sm text-slate-600">
-            Set <code className="bg-slate-100 px-1 rounded">VITE_ADMIN_URL</code> on the student
-            Vercel project to your admin origin (e.g.{' '}
-            <code className="bg-slate-100 px-1 rounded text-xs">
-              https://cadt-events-ytaz.vercel.app
-            </code>
-            ), then redeploy.
           </p>
         </div>
       </div>

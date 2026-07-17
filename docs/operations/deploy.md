@@ -6,9 +6,8 @@ Student/demo stack with managed free/hobby hosts.
 |-------|------|--------|
 | Database | **Supabase** Postgres | `DATABASE_URL` (pooler) + `DIRECT_URL` (migrations) |
 | **Backend API** | **Render** free Web Service | Blueprint: `render.yaml` (API only) |
-| **Student web** | **Vercel** | Root directory: `frontend` |
-| **Admin web** | **Vercel** | Root directory: `frontend-admin` |
-| Auth | **Clerk** | Same app keys for web + admin + API |
+| **Student + Admin web** | **Vercel** | **One project**, repo root; build `scripts/build-web.sh` → `deploy/` (`/` student, `/admin` admin) |
+| Auth | **Clerk** | Same app keys; **one origin** → shared session |
 | Images | **Cloudinary** | Admin upload → URL in DB |
 | CI | **GitHub Actions** | `.github/workflows/ci.yml` — lint + build all packages |
 
@@ -27,7 +26,7 @@ GitHub (main)
     │         │
     │         └── Prisma + Supabase Postgres
     │
-    └─► Vercel auto-deploy  →  student app + admin app
+    └─► Vercel auto-deploy  →  one site: / + /admin
               │
               └── VITE_API_URL → Render API
 ```
@@ -37,7 +36,7 @@ GitHub (main)
 | Service | Trigger |
 |---------|---------|
 | API | Push to branch linked in Render |
-| Student / Admin | Push to branch linked in each Vercel project |
+| Web (student + admin) | Push to branch linked in the **single** Vercel project |
 
 ---
 
@@ -94,8 +93,8 @@ curl -sf https://cadt-events-api.onrender.com/api/health
 | `CLERK_SECRET_KEY` | yes | `sk_…` |
 | `CLERK_WEBHOOK_SECRET` | recommended | Clerk webhooks |
 | `ADMIN_EMAILS` | yes for demos | Comma-separated admin emails |
-| `FRONTEND_URL` | yes (CORS) | Vercel student URL, e.g. `https://cadt-events.vercel.app` |
-| `ADMIN_URL` | yes (CORS) | Vercel admin URL, e.g. `https://cadt-events-admin.vercel.app` |
+| `FRONTEND_URL` | yes (CORS) | Web origin, e.g. `https://cadt-events.vercel.app` |
+| `ADMIN_URL` | yes (CORS) | Same origin (or same + `/admin` host only — use same origin) e.g. `https://cadt-events.vercel.app` |
 | `PUBLIC_WEB_URL` | recommended | HTTPS student URL for Telegram buttons |
 | `CLOUDINARY_URL` | optional | Image upload |
 | `TELEGRAM_BOT_TOKEN` | optional | Bot DMs |
@@ -112,62 +111,46 @@ npm run start:prod     # prisma migrate deploy && node dist/server.js
 
 ---
 
-## 3. Frontends on Vercel (student + admin)
+## 3. Frontends on Vercel (one project, `/` + `/admin`)
 
-### Student app (`frontend/`)
+Student and admin stay in **separate folders** (`frontend/`, `frontend-admin/`) but ship as **one site**.
 
-1. Vercel → **Add New Project** → import GitHub repo.  
-2. **Root Directory:** `frontend`  
-3. Framework: Vite (auto). Build: `npm run build`, output: `dist`  
-4. SPA rewrites: `frontend/vercel.json` already rewrites to `index.html`  
-5. Environment variables (Production):
+1. Vercel → **Add New Project** (or edit existing) → import this repo.  
+2. **Root Directory:** leave empty / `.` (repo root) — uses root `vercel.json`.  
+3. Build: `bash scripts/build-web.sh` → output `deploy/`.  
+4. Env (Production) on **this one project**:
 
 | Variable | Example |
 |----------|---------|
-| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_…` (same Clerk app as admin) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_…` |
 | `VITE_API_URL` | `https://cadt-events.onrender.com/api` |
-| `VITE_ADMIN_URL` | `https://cadt-events-ytaz.vercel.app` |
 | `VITE_ADMIN_EMAILS` | `yeakkhai.ly@student.cadt.edu.kh` (merged with code defaults) |
 | `VITE_TELEGRAM_BOT_USERNAME` | bot username without `@` |
 
-6. Deploy → copy production URL → set Render `FRONTEND_URL` / `PUBLIC_WEB_URL`.
+5. Deploy → URLs:  
+   - Student: `https://cadt-events.vercel.app/`  
+   - Admin: `https://cadt-events.vercel.app/admin`  
+6. Set Render `FRONTEND_URL` + `ADMIN_URL` + `PUBLIC_WEB_URL` to that origin.  
+7. **Retire** the old second Vercel admin project (optional).
 
-### Admin app (`frontend-admin/`)
+> `VITE_*` vars are baked in at **build** time. Change them → redeploy.  
+> Local still uses two ports (`5173` + `3000`); only production is unified.
 
-1. Second Vercel project → **Root Directory:** `frontend-admin`  
-2. Same Vite build/output settings  
-3. Env:
-
-| Variable | Example |
-|----------|---------|
-| `VITE_CLERK_PUBLISHABLE_KEY` | same Clerk pk as student |
-| `VITE_API_URL` | `https://cadt-events.onrender.com/api` |
-| `VITE_USER_FRONTEND_URL` | `https://cadt-events.vercel.app` (non-admin redirect only) |
-| `VITE_ADMIN_EMAILS` | `yeakkhai.ly@student.cadt.edu.kh` |
-
-4. Deploy → set Render `ADMIN_URL` to this URL.
-
-> `VITE_*` vars are baked in at **build** time. Change them → redeploy Vercel project.
-
-### Dual-domain auth (important)
-
-Student (`cadt-events.vercel.app`) and admin (`cadt-events-ytaz.vercel.app`) are **different origins**. Clerk sessions are **not** shared.
+### Same-origin auth
 
 | Who | Where they log in | Expected |
 |-----|-------------------|----------|
-| Student | Student site | Stays on student app |
-| Admin | Student site | Sees **Open Admin Portal** → opens admin URL → **signs in again** on admin domain |
-| Admin | Admin site | Stays on admin dashboard |
-| Student | Admin site | After sign-in, redirected to student site (with short explanation) |
-
-Do **not** send unauthenticated admin visitors to the student `/login` URL — that caused redirect loops.
+| Student | `/` or `/login` | Stays on student UI |
+| Admin | `/` or `/login` | Auto-redirect to `/admin` (same cookie — no second login) |
+| Admin | `/admin` | Dashboard if admin; else send to `/` |
+| Student | `/admin` | After sign-in, redirected to student home |
 
 ---
 
 ## 4. Clerk dashboard checklist
 
-- Allowed origins / redirect URLs: both Vercel domains + localports if needed  
-- Webhook endpoint: `https://cadt-events-api.onrender.com/api/webhooks`  
+- Allowed origins / redirect URLs: **one** production web origin + local ports  
+- Webhook endpoint: `https://cadt-events.onrender.com/api/webhooks`  
 - Events: `user.created`, `user.updated`  
 - Signing secret → Render `CLERK_WEBHOOK_SECRET`
 
@@ -178,11 +161,9 @@ Do **not** send unauthenticated admin visitors to the student `/login` URL — t
 ```text
 API:    https://cadt-events.onrender.com
 Web:    https://cadt-events.vercel.app
-Admin:  https://cadt-events-ytaz.vercel.app
+Admin:  https://cadt-events.vercel.app/admin
 Health: https://cadt-events.onrender.com/api/health
 ```
-
-(If your Render service was renamed, use that host; keep student/admin CORS origins exact.)
 
 ---
 
@@ -192,7 +173,7 @@ Health: https://cadt-events.onrender.com/api/health
 |-------|------|--------|
 | **CI** | GitHub Actions | On PR/push: install, lint (soft), **build** backend + both frontends |
 | **CD API** | Render | Auto-deploy on push to connected branch |
-| **CD Web/Admin** | Vercel | Auto-deploy on push (per project root dir) |
+| **CD Web** | Vercel | Auto-deploy unified student + admin |
 | **DB migrate** | Render start command | `prisma migrate deploy` before `node dist/server.js` |
 | **Verify** | Health check | `curl -sf …/api/health` |
 
@@ -230,8 +211,9 @@ Env templates: each package’s `.env.example` only — never commit real `.env`
 | CORS errors from Vercel → API | `FRONTEND_URL` / `ADMIN_URL` wrong on Render | Set exact Vercel origins, redeploy API |
 | Frontend calls wrong API / localhost | Stale or missing `VITE_API_URL` | Set on Vercel, **redeploy** frontend |
 | Admin bounces to student after login | Missing `publicMetadata.role=ADMIN` and email not on allowlist | Clerk public metadata + `VITE_ADMIN_EMAILS` / Render `ADMIN_EMAILS`, redeploy |
-| Admin login loops with student site | Unauth admin users sent to student `/login` | Use on-domain admin LoginView (current code); set `afterSignOutUrl="/"` on admin |
-| Admin opens student site and stays there | Missing `VITE_ADMIN_URL` on student Vercel | Set admin origin, redeploy student project |
+| Admin 404 on `/admin` | Old dual-project deploy or missing rewrite | Root Directory = repo root; `vercel.json` + `scripts/build-web.sh` |
+| Admin assets 404 under `/admin` | Admin built without `ADMIN_BASE_PATH=/admin/` | Use unified `npm run build:web` only |
+| Admin opens student site and stays there | Role/email not detected as admin | Set Clerk `role: ADMIN` or allowlist email |
 | 401 on admin API | Clerk key mismatch or role not ADMIN | Same Clerk app; set role ADMIN; allowlist email |
 | Migrate fail on Render | Bad `DIRECT_URL` | Use session/direct Supabase URL |
 | Cold start timeout | Free Render sleep | Hit `/api/health` once before demo |

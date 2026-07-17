@@ -2,8 +2,9 @@
  * Admin detection for the student app.
  * Keep in sync with frontend-admin/src/lib/adminAccess.ts and backend ADMIN_EMAILS.
  *
- * Clerk sessions are NOT shared across student and admin domains.
- * Detecting admin here only drives "Open Admin Portal" — user must sign in again on admin.
+ * Production (Option 1): student + admin share one origin (`/admin`).
+ * One Clerk session — hard navigate to `/admin` keeps the cookie.
+ * Local: dual ports — optional VITE_ADMIN_URL (default http://localhost:3000).
  */
 
 const DEFAULT_ADMIN_EMAILS = [
@@ -98,23 +99,33 @@ export function isAdminAccount(opts: {
 export const isAdminUser = isAdminAccount;
 
 /**
- * Admin portal origin for hard-redirect after admin login on the student site.
- * - Prefer VITE_ADMIN_URL (set on student Vercel).
- * - Production build falls back to known admin host if env was forgotten.
- * - Localhost VITE_ADMIN_URL is allowed only in DEV (so local dual-app works).
+ * Where to send admins after login on the student app.
+ * - Production unified deploy: same-origin `/admin` (shared Clerk cookie).
+ * - Local dual-port: VITE_ADMIN_URL or http://localhost:3000.
  */
-export function getAdminPortalUrl(): string | null {
+export function getAdminPortalUrl(): string {
+  if (import.meta.env.DEV) {
+    const raw = (import.meta.env.VITE_ADMIN_URL as string | undefined)?.trim();
+    if (raw) return raw.replace(/\/$/, '');
+    return 'http://localhost:3000';
+  }
+  // Same-origin admin SPA (Option 1). Ignore legacy cross-domain VITE_ADMIN_URL.
   const raw = (import.meta.env.VITE_ADMIN_URL as string | undefined)?.trim();
   if (raw) {
     const url = raw.replace(/\/$/, '');
-    if (/localhost|127\.0\.0\.1/i.test(url)) {
-      return import.meta.env.DEV ? url : null;
+    // Relative path override (e.g. /admin)
+    if (url.startsWith('/')) return url;
+    // Same-host absolute still ok
+    try {
+      if (typeof window !== 'undefined') {
+        const u = new URL(url, window.location.origin);
+        if (u.origin === window.location.origin) {
+          return `${u.pathname}${u.search}${u.hash}` || '/admin';
+        }
+      }
+    } catch {
+      /* fall through */
     }
-    return url;
   }
-  // Production safety net when VITE_ADMIN_URL was not baked into the build
-  if (!import.meta.env.DEV) {
-    return 'https://cadt-events-ytaz.vercel.app';
-  }
-  return null;
+  return '/admin';
 }

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "bash scripts/build-web.sh",
+  "outputDirectory": "deploy",
+  "installCommand": "echo 'Dependencies installed per app inside scripts/build-web.sh'",
+  "framework": null,
+  "rewrites": [
+    { "source": "/admin", "destination": "/admin/index.html" },
+    { "source": "/admin/", "destination": "/admin/index.html" },
+    { "source": "/admin/:path*", "destination": "/admin/index.html" },
+    { "source": "/((?!admin(?:/|$)).*)", "destination": "/index.html" }
+  ]
+}

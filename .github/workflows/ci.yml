@@ -1,7 +1,7 @@
 # Continuous Integration — build gate for CADT Events
 # CD (deploy) is handled by hosts, not this workflow:
-#   - Backend  → Render auto-deploy (render.yaml)
-#   - Frontends → Vercel auto-deploy (rootDir frontend / frontend-admin)
+#   - Backend → Render auto-deploy (render.yaml)
+#   - Web     → Vercel auto-deploy (repo root vercel.json → / + /admin)
 name: CI
 
 on:
@@ -76,7 +76,6 @@ jobs:
         env:
           VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
           VITE_API_URL: https://example.com/api
-          VITE_ADMIN_URL: https://admin.example.com
 
   frontend-admin:
     name: Admin frontend (lint + build)
@@ -101,8 +100,14 @@ jobs:
         run: npm run lint
         continue-on-error: true
 
-      - name: Build
+      - name: Build (standalone base /)
         run: npm run build
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
+          VITE_API_URL: https://example.com/api
+
+      - name: Build (unified base /admin/)
+        run: ADMIN_BASE_PATH=/admin/ npm run build
         env:
           VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
           VITE_API_URL: https://example.com/api

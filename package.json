@@ -1,0 +1,11 @@
+{
+  "name": "cadt-events",
+  "private": true,
+  "description": "CADT Events monorepo — unified web build for student + admin on one origin",
+  "scripts": {
+    "build:web": "bash scripts/build-web.sh",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:admin": "npm --prefix frontend-admin run dev",
+    "dev:backend": "npm --prefix backend run dev"
+  }
+}
